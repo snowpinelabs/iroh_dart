@@ -1,0 +1,9 @@
+# Lints for the iroh_flutter plugin's own Dart (lib/). The vendored cargokit build tool and the
+# synced Rust crate are third-party / generated and excluded; the example has its own options.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "cargokit/**"
+    - "rust/**"
+    - "example/**"

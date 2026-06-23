@@ -18,11 +18,14 @@ updates:
       # Pinned to match rust/rust-toolchain.toml (the action tag IS the Rust version). Bump there.
       - dependency-name: "dtolnay/rust-toolchain"
 
-  # Dart / Flutter packages: the published plugin (root) and the example app.
+  # Dart/Flutter packages in the workspace: the root (melos), the pure-Dart binding, the Flutter
+  # plugin, and the example app.
   - package-ecosystem: "pub"
     directories:
       - "/"
-      - "/example"
+      - "/packages/iroh_quic"
+      - "/packages/iroh_flutter"
+      - "/packages/iroh_flutter/example"
     schedule:
       interval: "weekly"
     labels: ["dependencies"]
@@ -36,9 +39,9 @@ updates:
       # not via Dependabot.
       - dependency-name: "flutter_rust_bridge"
 
-  # Rust crate: the owned flutter_rust_bridge wrapper.
+  # Rust crate: the owned flutter_rust_bridge wrapper (canonical copy in iroh_quic).
   - package-ecosystem: "cargo"
-    directory: "/rust"
+    directory: "/packages/iroh_quic/rust"
     schedule:
       interval: "weekly"
     labels: ["dependencies"]

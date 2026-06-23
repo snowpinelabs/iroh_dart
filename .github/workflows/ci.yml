@@ -1,10 +1,10 @@
 name: ci
 
-# Test + cross-compilation matrix for iroh_dart.
-# The test job runs the Rust + Dart conformance tests. The cross-compile matrix proves the owned
-# `irohdart-ffi` crate builds for every native target family. Signing / notarization / precompiled-
-# binary publishing depend on repository secrets (see the `# SECRET:` markers) and run only on
-# tags; without secrets those steps are skipped.
+# CI for the iroh_dart monorepo (packages/iroh_quic + packages/iroh_flutter).
+# - green-gate: Rust + pure-Dart conformance tests for iroh_quic.
+# - flutter-analyze: resolves the whole workspace and analyzes the Flutter plugin + example.
+# - cross-compile: proves the owned `irohdart_ffi` crate builds for every native target family.
+# The prebuilt-binary release + pub.dev publishing live in release.yml (runs on v* tags).
 
 on:
   push:
@@ -15,6 +15,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CRATE_DIR: packages/iroh_quic/rust
 
 jobs:
   green-gate:
@@ -23,11 +24,34 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.96.0
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
+      # iroh_quic is Flutter-free, but it shares a pub workspace with iroh_flutter, so resolving the
+      # workspace needs Flutter (which bundles Dart). check.sh runs `flutter pub get` at the root,
+      # then cargo build/test + `dart analyze`/`dart test` on the pure-Dart package.
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
       - name: Run checks (cargo build/test + dart analyze/test)
-        run: ./tool/check.sh
+        run: ./packages/iroh_quic/tool/check.sh
+
+  flutter-analyze:
+    name: flutter analyze (plugin + example)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      # The plugin's vendored crate (packages/iroh_flutter/rust) is a committed mirror of
+      # packages/iroh_quic/rust. Re-sync and fail if it drifted from the canonical source.
+      - run: bash tool/sync_native.sh
+      - name: Verify vendored crate is in sync
+        run: |
+          if ! git diff --quiet -- packages/iroh_flutter/rust; then
+            echo "::error::packages/iroh_flutter/rust is stale. Run 'bash tool/sync_native.sh' and commit."
+            git --no-pager diff --stat -- packages/iroh_flutter/rust
+            exit 1
+          fi
+      - run: flutter pub get
+      - run: dart analyze --fatal-infos packages/iroh_flutter
+      - run: flutter analyze packages/iroh_flutter/example
 
   cross-compile:
     name: cross-compile ${{ matrix.name }}
@@ -50,7 +74,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
-        working-directory: rust
+        working-directory: packages/iroh_quic/rust
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.96.0
@@ -89,11 +113,8 @@ jobs:
         with:
           name: native-${{ matrix.name }}
           path: |
-            rust/target/**/release/*.so
-            rust/target/**/release/*.dylib
-            rust/target/**/release/*.dll
-            rust/jniLibs/**/*.so
+            packages/iroh_quic/rust/target/**/release/*.so
+            packages/iroh_quic/rust/target/**/release/*.dylib
+            packages/iroh_quic/rust/target/**/release/*.dll
+            packages/iroh_quic/rust/jniLibs/**/*.so
           if-no-files-found: ignore
-
-  # The actual prebuilt-binary release (sign + upload all targets, then publish) lives in
-  # release.yml and runs on `v*` tags via cargokit's precompiled-binaries mode.

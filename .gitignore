@@ -1,42 +1,46 @@
-# === Dart / Flutter ===
+# === Dart / pub workspace ===
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
 build/
 **/doc/api/
+# The single root pubspec.lock IS committed (reproducible workspace resolution); members have none.
+packages/*/pubspec.lock
 
 # === Rust ===
 **/target/
-# Cargo.lock IS committed (reproducible native builds for the shipped plugin).
+# Cargo.lock IS committed (reproducible native builds for the shipped crate).
 
 # === flutter_rust_bridge generated (KEPT, not ignored) ===
-# lib/src/rust/** and rust/**/src/frb_generated.rs are committed so consumers need no codegen.
+# packages/iroh_quic/lib/src/rust/** and rust/**/src/frb_generated.rs are committed so consumers
+# need no codegen.
 
-# === Example app: generated / machine-specific / native build outputs ===
-**/example/.flutter-plugins
-**/example/.flutter-plugins-dependencies
-**/example/ios/Flutter/ephemeral/
-**/example/ios/Flutter/flutter_export_environment.sh
-**/example/ios/Flutter/Generated.xcconfig
-**/example/ios/Pods/
-**/example/ios/.symlinks/
-**/example/ios/Runner/GeneratedPluginRegistrant.*
-**/example/ios/Podfile.lock
-**/example/macos/Flutter/ephemeral/
-**/example/macos/Flutter/GeneratedPluginRegistrant.swift
-**/example/macos/Pods/
-**/example/macos/Podfile.lock
-**/example/android/.gradle/
-**/example/android/local.properties
-**/example/android/app/src/main/jniLibs/
-**/example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-**/example/linux/flutter/ephemeral/
-**/example/windows/flutter/ephemeral/
+# === Vendored crate copy ===
+# packages/iroh_flutter/rust is a COMMITTED mirror of packages/iroh_quic/rust (cargokit needs the
+# crate co-located, and `dart pub publish` drops .gitignore'd files — so it must be tracked to ship
+# in the plugin archive). Keep it current with `tool/sync_native.sh`; CI verifies it's in sync. Only
+# its build output is ignored (covered by the `**/target/` rule above).
 
-# === Plugin native staging (produced by tool/build_mobile.sh) ===
-ios/native/
-android/src/main/jniLibs/
+# === Flutter plugin + example: generated / machine-specific / native build outputs ===
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Generated.xcconfig
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Podfile.lock
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Pods/
+**/macos/Podfile.lock
+**/android/.gradle/
+**/android/local.properties
+**/android/app/src/main/jniLibs/
+**/android/src/main/jniLibs/
+**/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
 
 # === IDE ===
 .idea/

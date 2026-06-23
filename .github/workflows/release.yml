@@ -1,32 +1,38 @@
 name: release
 
-# Runs on a version tag (e.g. `v1.0.0`): cross-compiles the native library for EVERY supported
-# target, signs each, and uploads them to a GitHub release tagged `precompiled_<crateHash>` (cargokit
-# precompiled-binaries mode) so consumers without a Rust toolchain download a signed binary instead
-# of compiling. Then publishes the package to pub.dev and creates a human-facing GitHub Release for
-# the tag with notes from CHANGELOG.md.
+# Runs on a version tag (e.g. `v1.0.0`):
+#   1. green-gate         - Rust + pure-Dart conformance tests.
+#   2. create-release     - ensure the tag's GitHub Release exists (holds the prebuilt assets).
+#   3. prebuilt (matrix)  - build the iroh_quic native cdylib for every desktop target, Ed25519-sign,
+#                           and upload `irohdart_ffi-<target>.<ext>` + `.sig` to the Release. Pure-Dart
+#                           consumers then `dart run iroh_quic:setup` to download + verify a binary.
+#   4. publish-iroh-quic  - publish packages/iroh_quic to pub.dev (OIDC).
+#   5. publish-iroh-flutter - vendor the shared crate, then publish packages/iroh_flutter (depends on
+#                           the now-hosted iroh_quic).
+#   6. github-release     - finalise the Release notes from packages/iroh_quic/CHANGELOG.md.
+#
+# Android/iOS ship no prebuilt (not `dart run` targets): the iroh_flutter plugin compiles the crate
+# via cargokit during the consumer's app build.
 #
 # Required secrets:
-#   CARGOKIT_PRIVATE_KEY  - Ed25519 private key (hex) whose public half is in rust/cargokit.yaml.
-#                           Generate with: cd cargokit/build_tool && dart run build_tool gen-key
+#   IROHDART_SIGNING_KEY - Ed25519 signing key (hex). Public half = kPrebuiltPublicKeyHex in
+#                          packages/iroh_quic/lib/src/ffi/prebuilt.dart. The project's existing
+#                          cargokit private key works VERBATIM (128-hex seed||public); a fresh 64-hex
+#                          32-byte seed from packages/iroh_quic/tool/gen_key.dart also works.
 #   (GITHUB_TOKEN is provided automatically; needs contents:write - set below.)
-# pub.dev publishing uses OIDC: the `publish` job runs in the `pub.dev` GitHub Actions environment
-# (configured under pub.dev's "Automated publishing"); no pub.dev token is stored in the repo.
+# pub.dev publishing uses OIDC: the publish jobs run in the `pub.dev` GitHub Actions environment;
+# both packages must have "Automated publishing" enabled on pub.dev for this repo + tag pattern.
 
 on:
   push:
-    # Semver version tags only (matches the tag pattern configured for pub.dev automated publishing).
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
 
 permissions:
-  contents: write   # create the precompiled_<hash> release + upload assets
+  contents: write   # create the release + upload prebuilt assets
   id-token: write   # pub.dev OIDC publishing
 
 env:
   CARGO_TERM_COLOR: always
-  CRATE_DIR: rust
-  BUILD_TOOL_DIR: cargokit/build_tool
-  REPO: snowpinelabs/iroh_dart
 
 jobs:
   green-gate:
@@ -37,121 +43,140 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.96.0
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
-      - run: cargo install flutter_rust_bridge_codegen --version '^2'
-      - run: flutter pub get
-      - run: ./tool/check.sh
+      # Resolves the workspace (flutter pub get) + cargo build/test + dart analyze/test on iroh_quic.
+      - run: ./packages/iroh_quic/tool/check.sh
 
-  precompile-binaries:
-    name: precompile ${{ matrix.name }}
+  create-release:
+    name: ensure release exists
     needs: green-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create the release if it does not exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "$tag" \
+              --notes "Release $tag. Prebuilt native libraries are attached below." --verify-tag
+          fi
+
+  prebuilt:
+    name: prebuilt ${{ matrix.name }}
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: apple
+          # Desktop cdylibs are the only assets `dart run iroh_quic:setup` downloads.
+          - name: macos
             os: macos-26
-            rust_targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios,aarch64-apple-darwin,x86_64-apple-darwin
-            args: >-
-              --target aarch64-apple-ios --target aarch64-apple-ios-sim --target x86_64-apple-ios
-              --target aarch64-apple-darwin --target x86_64-apple-darwin
+            ext: dylib
+            targets: aarch64-apple-darwin x86_64-apple-darwin
           - name: linux
             os: ubuntu-latest
-            rust_targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
-            # zigbuild (triggered by --glibc-version) gives a portable glibc floor for both arches.
-            args: >-
-              --target x86_64-unknown-linux-gnu --target aarch64-unknown-linux-gnu --glibc-version 2.17
+            ext: so
+            targets: x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
           - name: windows
             os: windows-latest
-            rust_targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
-            args: --target x86_64-pc-windows-msvc --target aarch64-pc-windows-msvc
-          - name: android
-            os: ubuntu-latest
-            rust_targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
-            # android args are assembled in the step (needs the resolved SDK/NDK paths).
-            args: ""
+            ext: dll
+            targets: x86_64-pc-windows-msvc aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-
       - uses: dtolnay/rust-toolchain@1.96.0
         with:
-          targets: ${{ matrix.rust_targets }}
-
+          targets: ${{ matrix.targets }}
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
+      - name: Resolve workspace (for the cryptography dep used by the signer)
+        run: flutter pub get
 
-      # --- Linux: zig + cargo-zigbuild for a portable glibc build of both arches ---
+      # --- Linux: zig + cargo-zigbuild for a portable glibc floor + arm64 cross ---
       - if: matrix.name == 'linux'
         uses: mlugg/setup-zig@v2
         with: { version: 0.13.0 }
       - if: matrix.name == 'linux'
         run: cargo install cargo-zigbuild
 
-      # --- Android: NDK r28+ (16KB page alignment) under the runner's Android SDK ---
-      - if: matrix.name == 'android'
-        name: Install Android NDK r28
-        run: |
-          set -e
-          echo "ANDROID_NDK_VERSION=28.0.13004108" >> "$GITHUB_ENV"
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.0.13004108" >/dev/null
-
-      - name: build_tool deps
+      - name: Build, sign, and upload prebuilt libraries
         shell: bash
-        working-directory: ${{ env.BUILD_TOOL_DIR }}
-        run: dart pub get
-
-      # --- Build + sign + upload all targets for this platform ---
-      - name: precompile (non-android)
-        if: matrix.name != 'android'
-        shell: bash
-        working-directory: ${{ env.BUILD_TOOL_DIR }}
         env:
-          PRIVATE_KEY: ${{ secrets.CARGOKIT_PRIVATE_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IROHDART_SIGNING_KEY: ${{ secrets.IROHDART_SIGNING_KEY }}
+          CRATE: packages/iroh_quic/rust
         run: |
-          dart run build_tool precompile-binaries -v \
-            --repository "$REPO" \
-            --manifest-dir ../../rust \
-            ${{ matrix.args }}
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          assets=()
+          for t in ${{ matrix.targets }}; do
+            echo "::group::build $t"
+            if [ "${{ matrix.name }}" = "linux" ]; then
+              # `.2.17` pins a portable glibc floor; output still lands in target/$t/release.
+              cargo zigbuild --release --manifest-path "$CRATE/Cargo.toml" --target "$t.2.17"
+            else
+              cargo build --release --manifest-path "$CRATE/Cargo.toml" --target "$t"
+            fi
+            echo "::endgroup::"
+            case "${{ matrix.name }}" in
+              macos)   src="$CRATE/target/$t/release/libirohdart_ffi.dylib" ;;
+              linux)   src="$CRATE/target/$t/release/libirohdart_ffi.so" ;;
+              windows) src="$CRATE/target/$t/release/irohdart_ffi.dll" ;;
+            esac
+            asset="irohdart_ffi-$t.${{ matrix.ext }}"
+            cp "$src" "$asset"
+            assets+=("$asset")
+          done
+          # Emit a detached <asset>.sig next to each library, then upload library + signature.
+          dart run packages/iroh_quic/tool/sign_prebuilt.dart "${assets[@]}"
+          uploads=()
+          for a in "${assets[@]}"; do uploads+=("$a" "$a.sig"); done
+          gh release upload "$tag" "${uploads[@]}" --clobber --repo "$GITHUB_REPOSITORY"
 
-      - name: precompile (android)
-        if: matrix.name == 'android'
-        shell: bash
-        working-directory: ${{ env.BUILD_TOOL_DIR }}
-        env:
-          PRIVATE_KEY: ${{ secrets.CARGOKIT_PRIVATE_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          dart run build_tool precompile-binaries -v \
-            --repository "$REPO" \
-            --manifest-dir ../../rust \
-            --target aarch64-linux-android --target armv7-linux-androideabi \
-            --target x86_64-linux-android --target i686-linux-android \
-            --android-sdk-location "$ANDROID_HOME" \
-            --android-ndk-version "$ANDROID_NDK_VERSION" \
-            --android-min-sdk-version 24
-
-  publish:
-    name: publish to pub.dev
-    needs: precompile-binaries
-    if: startsWith(github.ref, 'refs/tags/v')
+  publish-iroh-quic:
+    name: publish iroh_quic to pub.dev
+    needs: prebuilt
     runs-on: ubuntu-latest
-    # pub.dev's automated publishing requires the run to come from this GitHub Actions environment;
-    # the OIDC id-token (granted at the workflow level) is exchanged for short-lived pub.dev creds,
-    # so no pub.dev token is stored in the repo.
-    environment: pub.dev
+    environment: pub.dev   # OIDC: short-lived pub.dev creds, no stored token
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
       - run: flutter pub get
-      - name: Publish
-        run: flutter pub publish --force
+      - name: Publish iroh_quic
+        run: flutter pub -C packages/iroh_quic publish --force
+
+  publish-iroh-flutter:
+    name: publish iroh_flutter to pub.dev
+    needs: publish-iroh-quic
+    runs-on: ubuntu-latest
+    environment: pub.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      # Vendor the shared crate into the plugin so the published archive is self-contained.
+      - run: bash tool/sync_native.sh
+      - run: flutter pub get
+      - name: Publish iroh_flutter (retry while pub.dev indexes the just-published iroh_quic)
+        shell: bash
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3 4 5; do
+            if flutter pub -C packages/iroh_flutter publish --force; then
+              echo "published on attempt $attempt"; exit 0
+            fi
+            echo "publish attempt $attempt failed (iroh_quic may not be indexed yet); waiting 60s..."
+            sleep 60
+          done
+          echo "iroh_flutter publish failed after retries" >&2
+          exit 1
 
   github-release:
     name: github release page
-    needs: publish
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish-iroh-flutter
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -162,16 +187,15 @@ jobs:
         run: |
           tag="$GITHUB_REF_NAME"       # e.g. v1.0.0
           version="${tag#v}"           # e.g. 1.0.0
-          # Pull the "## <version>" section body from CHANGELOG.md (up to the next "## " heading).
+          # Pull the "## <version>" section body from iroh_quic's CHANGELOG (up to the next "## ").
           awk -v ver="## $version" '
             index($0, ver) == 1 { flag = 1; next }
             /^## / && flag { exit }
             flag { print }
-          ' CHANGELOG.md > notes.md
-          [ -s notes.md ] || echo "Release $tag of iroh_dart." > notes.md
+          ' packages/iroh_quic/CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Release $tag of iroh_quic + iroh_flutter." > notes.md
           echo "----- notes for $tag -----"; cat notes.md
-          # Create the release page, or refresh its notes if it already exists (idempotent re-runs).
-          # The cargokit binaries live on the precompiled_<hash> release and are not attached here.
+          # Refresh the notes on the release (created earlier, carrying the prebuilt assets).
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$tag" --notes-file notes.md
           else

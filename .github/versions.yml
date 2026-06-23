@@ -1,12 +1,12 @@
-# Version map: iroh_dart -> the references it wraps and the tooling it pins.
-# Used to track the pinned iroh + tooling versions: when one of these bumps, re-check the wrapped
-# API surface, re-run codegen (tool/frb_codegen.sh), and re-verify on-device
-# (example/integration_test).
+# Version map for the iroh_dart monorepo (packages/iroh_quic + packages/iroh_flutter) -> the
+# references it wraps and the tooling it pins. When one bumps, re-check the wrapped API surface,
+# re-run codegen (packages/iroh_quic/tool/frb_codegen.sh), and re-verify
+# (packages/iroh_quic/tool/check.sh + packages/iroh_flutter/example/integration_test).
 
-# The Rust P2P core this package wraps (we bind it directly; not n0's `iroh-ffi` UniFFI lib).
+# The Rust P2P core these packages wrap (bound directly; not n0's `iroh-ffi` UniFFI lib).
 wraps:
   iroh:
-    pub: "iroh_dart"
+    pub: "iroh_quic"
     crate: "iroh"
     repo: "n0-computer/iroh"
     version: "1.0.0"
@@ -29,17 +29,25 @@ tooling:
     version: "2.12.0"
     note: "Codegen and runtime MUST be the SAME version; bumping requires re-running codegen."
 
+  cryptography:
+    pub: "cryptography"
+    note: "Ed25519 verify/sign for the prebuilt pipeline (iroh_quic bin/setup.dart, tool/sign_prebuilt.dart)."
+
   cargokit:
     repo: "irondash/cargokit"
-    vendored: "cargokit"
-    commit: "ec49f0ee89744a8e80ee8df764bfb1faea95319b"
-    note: "Vendored native-build glue. Local patch: Gradle 9 ExecOperations (gradle/plugin.gradle)."
+    vendored: "packages/iroh_flutter/cargokit"
+    note: "Native-build glue for the Flutter plugin (Gradle/CocoaPods/CMake). Vendored via git subtree."
+
+  melos:
+    pub: "melos"
+    version: "^8.0.0"
+    note: "Monorepo task runner; config under the `melos:` key in the root pubspec (no melos.yaml)."
 
 # Toolchain versions required to build the native library.
 toolchain:
   rust:
     version: "1.96.0"
-    note: "Pinned in rust/rust-toolchain.toml; iroh MSRV 1.91 / edition 2024."
+    note: "Pinned in packages/iroh_quic/rust/rust-toolchain.toml; iroh MSRV 1.91 / edition 2024."
 
   android-ndk:
     version: "29.0.14206865"
