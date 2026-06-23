@@ -1,0 +1,52 @@
+# Dependabot keeps dependencies current across the three ecosystems in this repo. Each language is
+# collapsed into a single grouped PR so reviews stay manageable. Deliberate version pins are ignored
+# (they are coupled to other files and must be bumped by hand).
+version: 2
+updates:
+  # GitHub Actions used by the ci / release workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies"]
+    assignees: ["leonardocustodio"]
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    ignore:
+      # Pinned to match rust/rust-toolchain.toml (the action tag IS the Rust version). Bump there.
+      - dependency-name: "dtolnay/rust-toolchain"
+
+  # Dart / Flutter packages: the published plugin (root) and the example app.
+  - package-ecosystem: "pub"
+    directories:
+      - "/"
+      - "/example"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies"]
+    assignees: ["leonardocustodio"]
+    groups:
+      dart:
+        patterns:
+          - "*"
+    ignore:
+      # The flutter_rust_bridge runtime MUST equal the codegen version; bump it with a codegen run,
+      # not via Dependabot.
+      - dependency-name: "flutter_rust_bridge"
+
+  # Rust crate: the owned flutter_rust_bridge wrapper.
+  - package-ecosystem: "cargo"
+    directory: "/rust"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies"]
+    assignees: ["leonardocustodio"]
+    groups:
+      rust:
+        patterns:
+          - "*"
+    ignore:
+      # Same codegen-coupling as the Dart side (Cargo pins flutter_rust_bridge = "=2.12.0").
+      - dependency-name: "flutter_rust_bridge"
