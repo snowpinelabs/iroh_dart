@@ -1,7 +1,6 @@
 name: iroh_dart
 description: >-
-  Dart/Flutter binding for iroh 1.0 - peer-to-peer QUIC networking (endpoints, connections,
-  streams, relays, address lookup) over the shared Rust core. Wraps iroh; does not re-port it.
+  Dart/Flutter binding for iroh 1.0 - peer-to-peer QUIC networking with endpoints, connections, streams, relays, and address lookup over the Rust core.
 version: 1.0.0
 homepage: https://github.com/snowpinelabs/iroh_dart
 repository: https://github.com/snowpinelabs/iroh_dart
