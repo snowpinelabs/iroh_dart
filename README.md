@@ -4,14 +4,9 @@
 networking (endpoints, connections, streams, relays, address lookup) for Linux, macOS, Windows,
 Android, and iOS. **No Flutter required.**
 
-`iroh_dart` **wraps** the iroh Rust core through an owned
-[flutter_rust_bridge](https://pub.dev/packages/flutter_rust_bridge) crate (used in its pure-Dart
-mode — the name is historical, the runtime has no Flutter dependency); it does not re-implement iroh
+`iroh_dart` **wraps** the iroh Rust core; it does not re-implement iroh
 in Dart. The Dart API mirrors iroh 1.0's nouns exactly (`Endpoint` / `EndpointId` / `EndpointAddr`,
 `addressLookup`), so iroh's docs and the n0 examples transfer directly.
-
-> Pure Dart: the native cdylib is built with `cargo build` and loaded over `dart:ffi`
-> (no Flutter, no cargokit). Runs under plain `dart run` / `dart test`.
 
 ## Quick start
 
