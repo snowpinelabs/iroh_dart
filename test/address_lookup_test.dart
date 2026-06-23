@@ -4,8 +4,8 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// The Dart->Rust custom `AddressLookup` bridge. A client dials a server known only by its
 /// [EndpointId]; iroh calls back into a **Dart** resolver to discover the server's address, then

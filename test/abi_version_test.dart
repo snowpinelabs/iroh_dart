@@ -1,8 +1,8 @@
 @TestOn('vm')
 library;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// Host check: load the native library, verify the ABI handshake, and call the no-op FFI
 /// function end-to-end (Rust -> FRB glue -> native lib -> Dart). The on-device half (iOS +

@@ -4,8 +4,8 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// Byte-identical bidi echo across two in-process endpoints over `connect` / `acceptBi`, plus
 /// unidirectional streams and datagrams. Relays are disabled; the client reaches the server via

@@ -4,8 +4,8 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// Multi-protocol multiplexing by **dispatching on ALPN in Dart** over the accept loop - an
 /// alternative to bridging async Rust traits. One server advertises two ALPNs and routes each

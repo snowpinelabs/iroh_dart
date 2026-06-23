@@ -1,7 +1,10 @@
 name: iroh_dart
 description: >-
-  Dart/Flutter binding for iroh 1.0 - peer-to-peer QUIC networking with endpoints, connections, streams, relays, and address lookup over the Rust core.
-version: 1.0.0
+  Pure-Dart binding for iroh 1.0 - peer-to-peer QUIC networking with endpoints,
+  connections, streams, relays, and address lookup over the Rust core. No
+  Flutter: the native cdylib is built with cargo and loaded via dart:ffi
+  (flutter_rust_bridge runtime, pure-Dart mode).
+version: 1.0.1
 homepage: https://github.com/snowpinelabs/iroh_dart
 repository: https://github.com/snowpinelabs/iroh_dart
 issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
@@ -14,31 +17,12 @@ topics:
 
 environment:
   sdk: ^3.12.0
-  flutter: ">=3.38.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
-  # Runtime half of flutter_rust_bridge - version MUST match the codegen (2.12.0).
+  # Runtime half of flutter_rust_bridge (pure-Dart; depends only on
+  # args/async/meta/path/web — no Flutter). Version MUST match the codegen.
   flutter_rust_bridge: 2.12.0
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^6.0.0
-
-flutter:
-  plugin:
-    # FFI plugin (no per-platform Dart classes): cargokit hooks the Rust build into each
-    # platform's native build; the loader resolves the symbol via dart:ffi.
-    platforms:
-      android:
-        ffiPlugin: true
-      ios:
-        ffiPlugin: true
-      macos:
-        ffiPlugin: true
-      linux:
-        ffiPlugin: true
-      windows:
-        ffiPlugin: true
+  lints: ^5.0.0
+  test: ^1.25.0

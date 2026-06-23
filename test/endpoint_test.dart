@@ -1,8 +1,8 @@
 @TestOn('vm')
 library;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// `Endpoint.bind()` -> `addr()` -> `close()` round-trip, async `Future`s complete on Dart's event
 /// loop, and the embedded tokio runtime survives repeated bind/close with no leak or hang. Relays

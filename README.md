@@ -1,22 +1,30 @@
 # iroh_dart
 
-Dart/Flutter binding for **[iroh](https://github.com/n0-computer/iroh) 1.0** - peer-to-peer QUIC
-networking (endpoints, connections, streams, relays, address lookup) for iOS, Android, macOS,
-Windows, and Linux.
+**Pure-Dart** binding for **[iroh](https://github.com/n0-computer/iroh) 1.0** - peer-to-peer QUIC
+networking (endpoints, connections, streams, relays, address lookup) for Linux, macOS, Windows,
+Android, and iOS. **No Flutter required.**
 
 `iroh_dart` **wraps** the iroh Rust core through an owned
-[flutter_rust_bridge](https://pub.dev/packages/flutter_rust_bridge) crate; it does not re-implement
-iroh in Dart. The Dart API mirrors iroh 1.0's nouns exactly (`Endpoint` / `EndpointId` /
-`EndpointAddr`, `addressLookup`), so iroh's docs and the n0 examples transfer directly.
+[flutter_rust_bridge](https://pub.dev/packages/flutter_rust_bridge) crate (used in its pure-Dart
+mode — the name is historical, the runtime has no Flutter dependency); it does not re-implement iroh
+in Dart. The Dart API mirrors iroh 1.0's nouns exactly (`Endpoint` / `EndpointId` / `EndpointAddr`,
+`addressLookup`), so iroh's docs and the n0 examples transfer directly.
+
+> Pure Dart: the native cdylib is built with `cargo build` and loaded over `dart:ffi`
+> (no Flutter, no cargokit). Runs under plain `dart run` / `dart test`.
 
 ## Quick start
+
+Build the native library once (`cd rust && cargo build --release`), then:
 
 ```dart
 import 'dart:typed_data';
 import 'package:iroh_dart/iroh_dart.dart';
 
 Future<void> main() async {
-  await Iroh.init(); // loads the native library + verifies the ABI handshake
+  // Loads the native library (rust/target/{debug,release}/libirohdart_ffi.so by
+  // default; pass libraryPath: for a custom location) + verifies the ABI handshake.
+  await Iroh.init();
 
   // Identity & addressing (pure data, no runtime).
   final secret = SecretKey.generate();
@@ -48,12 +56,14 @@ Future<void> main() async {
 
 ## Platforms
 
-| iOS | Android | macOS | Windows | Linux |
+| Linux | macOS | Windows | Android | iOS |
 |---|---|---|---|---|
 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-Consumers without a Rust toolchain download a signed, prebuilt native library (cargokit
-precompiled-binaries mode); consumers with Rust build from source automatically.
+The native library is built from source with `cargo` (Rust toolchain required). On desktop the
+loader finds `rust/target/{debug,release}/libirohdart_ffi.so` automatically (or pass an explicit
+`libraryPath:`); on mobile, cross-compile the cdylib (Android) / staticlib (iOS) and bundle it the
+way your host app expects.
 
 ## API surface
 
@@ -75,13 +85,21 @@ precompiled-binaries mode); consumers with Rust build from source automatically.
 > **Lazy-stream footgun:** a freshly opened `SendStream` is invisible to the peer until the first
 > `writeAll`.
 
+Run the bundled headless example (`dart run`, no Flutter):
+
+```sh
+cd rust && cargo build --release && cd ..
+dart pub get
+dart run example/echo.dart
+```
+
 ## Develop
 
 ```sh
-flutter pub get
-cargo install flutter_rust_bridge_codegen --version '^2'
+dart pub get
+cargo install flutter_rust_bridge_codegen --version '^2'  # standalone cargo binary
 ./tool/frb_codegen.sh   # regen FRB glue after editing rust/src/api/*
-./tool/check.sh         # runs cargo build+test, flutter analyze+test
+./tool/check.sh         # cargo build+test, then dart analyze + dart test
 ```
 
 Requires Rust >= 1.91 (edition 2024; pinned to 1.96.0) and, for Android, NDK r28+.

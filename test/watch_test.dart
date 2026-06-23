@@ -4,8 +4,8 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// Reactive state bridged to Dart `Stream`s. Verifies streams emit, that cancellation is leak-free
 /// under repeated subscribe/cancel (the host proxy for the on-device `NativeCallable.listener` load

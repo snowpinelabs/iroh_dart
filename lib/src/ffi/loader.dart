@@ -14,9 +14,10 @@ const int kIrohdartExpectedAbiVersion = 1;
 
 /// Loads and initialises the `irohdart-ffi` native library exactly once.
 ///
-/// In a real Flutter app the bundled library is found automatically by flutter_rust_bridge's
-/// default loader (cargokit stages it per platform). For host tests / desktop dev, pass an
-/// explicit [libraryPath], or rely on the built-in [_desktopDevSearchPaths] disk-path fallback.
+/// Pure Dart: build the cdylib with `cargo build` and the [_desktopDevSearchPaths]
+/// disk-path fallback finds `rust/target/{debug,release}/libirohdart_ffi.so`. Pass an
+/// explicit [libraryPath] for a custom location; on iOS/macOS the staticlib is
+/// linked into the host binary and resolved via the process symbol table.
 abstract final class IrohRuntime {
   static bool _initialised = false;
 
