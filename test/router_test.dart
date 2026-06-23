@@ -4,8 +4,8 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// The Dart->Rust `ProtocolHandler` bridge. One iroh `Router` multiplexes two ALPNs in a single
 /// process, each handled by a **Dart async callback** that the Rust router invokes per inbound

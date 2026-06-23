@@ -9,8 +9,8 @@ import 'ffi/loader.dart';
 abstract final class Iroh {
   /// Loads and initialises the native runtime, verifying the ABI version. Idempotent.
   ///
-  /// [libraryPath] overrides library resolution (host tests / non-standard layouts); in a real
-  /// Flutter app it is unnecessary - the bundled library is found automatically.
+  /// [libraryPath] overrides library resolution (non-standard layouts); by default the loader
+  /// finds the cargo-built `libirohdart_ffi` next to `rust/target/` or in the process symbols.
   static Future<void> init({String? libraryPath}) =>
       IrohRuntime.ensureInitialized(libraryPath: libraryPath);
 

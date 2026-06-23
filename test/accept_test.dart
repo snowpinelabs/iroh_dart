@@ -4,8 +4,8 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// The accept loop with the Dart-driven [Incoming] filter - multiple concurrent inbound
 /// connections, the `accept` path, and the `refuse` path. Relays disabled, loopback addrs.

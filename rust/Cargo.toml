@@ -4,7 +4,7 @@
 # produced lib artifact (`libirohdart_ffi.a`/`.dylib`/`.so`) - cargokit looks artifacts up by the
 # package name verbatim.
 name = "irohdart_ffi"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 publish = false
 rust-version = "1.91"

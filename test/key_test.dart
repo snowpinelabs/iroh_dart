@@ -3,8 +3,8 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:iroh_dart/iroh_dart.dart';
+import 'package:test/test.dart';
 
 /// Identity and addressing. Ported from iroh-base's `#[cfg(test)]` vectors (key.rs /
 /// endpoint_addr.rs). Because each call dispatches into the real iroh-base crate through FFI,

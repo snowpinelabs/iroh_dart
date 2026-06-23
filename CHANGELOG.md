@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 - Dart-only (Flutter dropped)
+
+The package is now **pure Dart** — no `flutter` SDK dependency, runnable under
+`dart run` / `dart test`. The Dart/Rust API is unchanged; only the packaging moves
+off Flutter, so existing code keeps working (build the cdylib with `cargo` instead
+of relying on the Flutter plugin build).
+
 ## 1.0.0
 
 Initial release - a native Dart/Flutter binding for `iroh 1.0`, wrapping the iroh Rust core through

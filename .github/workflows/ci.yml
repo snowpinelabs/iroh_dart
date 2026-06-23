@@ -19,18 +19,14 @@ env:
 jobs:
   green-gate:
     name: tests (rust + dart)
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.96.0
-      - uses: subosito/flutter-action@v2
+      - uses: dart-lang/setup-dart@v1
         with:
-          channel: stable
-      - name: Install flutter_rust_bridge_codegen
-        run: cargo install flutter_rust_bridge_codegen --version '^2'
-      - name: flutter pub get (workspace)
-        run: flutter pub get
-      - name: Run checks
+          sdk: stable
+      - name: Run checks (cargo build/test + dart analyze/test)
         run: ./tool/check.sh
 
   cross-compile:
