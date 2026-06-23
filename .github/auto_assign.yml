@@ -1,0 +1,4 @@
+# Config for kentaro-m/auto-assign-action (see .github/workflows/assign.yml).
+# Set addAssignees to 'author' to set the PR creator as the assignee.
+addAssignees: author
+runOnDraft: true

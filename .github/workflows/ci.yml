@@ -19,9 +19,9 @@ env:
 jobs:
   green-gate:
     name: tests (rust + dart)
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.96.0
       - uses: subosito/flutter-action@v2
         with:
@@ -40,7 +40,7 @@ jobs:
       matrix:
         include:
           - name: apple
-            os: macos-latest
+            os: macos-26
             targets: aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin x86_64-apple-darwin
           - name: android
             os: ubuntu-latest
@@ -56,7 +56,7 @@ jobs:
       run:
         working-directory: rust
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.96.0
         with:
           targets: ${{ matrix.targets }}
@@ -89,7 +89,7 @@ jobs:
             echo "::warning::verify 16KB alignment manually (NDK r28+ aligns to 0x4000)"
           fi
       - name: Upload native libs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.name }}
           path: |
