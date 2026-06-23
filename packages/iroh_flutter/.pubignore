@@ -1,0 +1,18 @@
+# Keep the published plugin archive lean + self-contained: ship the SOURCE that consumers compile
+# (android/, ios/, macos/, linux/, windows/, cargokit/, rust/src + Cargo.toml/Cargo.lock), but
+# exclude all build outputs and machine-specific junk. The rust/ crate is vendored into this package
+# by tool/sync_native.sh before publishing (its canonical source is packages/iroh_quic/rust).
+#
+# NOTE: a .pubignore fully overrides this directory's .gitignore for publishing, so every exclusion
+# we rely on must be listed HERE.
+rust/target/
+**/.gradle/
+**/build/
+**/Pods/
+**/.symlinks/
+**/ephemeral/
+**/Podfile.lock
+**/xcuserdata/
+.DS_Store
+**/.DS_Store
+example/

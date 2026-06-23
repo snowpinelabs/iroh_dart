@@ -1,104 +1,65 @@
-# iroh_dart
+# iroh_dart monorepo
 
-**Pure-Dart** binding for **[iroh](https://github.com/n0-computer/iroh) 1.0** - peer-to-peer QUIC
-networking (endpoints, connections, streams, relays, address lookup) for Linux, macOS, Windows,
-Android, and iOS. **No Flutter required.**
+Dart + Flutter bindings for **[iroh](https://github.com/n0-computer/iroh) 1.0** — peer-to-peer QUIC
+networking (endpoints, connections, streams, relays, address lookup) over the iroh Rust core via
+[flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge) + `dart:ffi`.
 
-`iroh_dart` **wraps** the iroh Rust core; it does not re-implement iroh
-in Dart. The Dart API mirrors iroh 1.0's nouns exactly (`Endpoint` / `EndpointId` / `EndpointAddr`,
-`addressLookup`), so iroh's docs and the n0 examples transfer directly.
+This is a [pub workspace](https://dart.dev/tools/pub/workspaces) (Melos) with two published packages
+that share one Rust crate:
 
-## Quick start
+| Package | What | Platforms |
+|---|---|---|
+| [`packages/iroh_quic`](packages/iroh_quic) | **Pure-Dart** binding. `dart run` / CLI / server. Loads a signed prebuilt native lib (`dart run iroh_quic:setup`) or builds from source. | Linux · macOS · Windows |
+| [`packages/iroh_flutter`](packages/iroh_flutter) | **Flutter plugin**. Builds the native core into your app via cargokit; re-exports the full `iroh_quic` API. | Android · iOS · macOS · Linux · Windows |
 
-Build the native library once (`cd rust && cargo build --release`), then:
+The Dart API is identical across both — `iroh_flutter` just adds the per-platform native build for
+Flutter apps. Pick `iroh_quic` for a desktop/CLI Dart program, `iroh_flutter` for a Flutter app.
 
-```dart
-import 'dart:typed_data';
-import 'package:iroh_dart/iroh_dart.dart';
+## Layout
 
-Future<void> main() async {
-  // Loads the native library (rust/target/{debug,release}/libirohdart_ffi.so by
-  // default; pass libraryPath: for a custom location) + verifies the ABI handshake.
-  await Iroh.init();
-
-  // Identity & addressing (pure data, no runtime).
-  final secret = SecretKey.generate();
-  print('my id: ${secret.publicKey.toZ32()}'); // publicKey == EndpointId
-
-  // A server that echoes one bidirectional stream.
-  const alpn = 'my-app/echo/0';
-  final server = await Endpoint.bind(alpns: [alpn.codeUnits]);
-  final serving = () async {
-    final conn = await server.accept();
-    final (send, recv) = await conn!.acceptBi();
-    await send.writeAll(await recv.readToEnd(1 << 20));
-    await send.finish();
-  }();
-
-  // A client that connects and reads the echo back.
-  final client = await Endpoint.bind();
-  final conn = await client.connect(server.addr, alpn.codeUnits);
-  final (send, recv) = await conn.openBi();
-  await send.writeAll(Uint8List.fromList('hello'.codeUnits));
-  await send.finish();
-  print(String.fromCharCodes(await recv.readToEnd(1 << 20))); // hello
-  await serving;
-
-  await client.close();
-  await server.close();
-}
 ```
-
-## Platforms
-
-| Linux | macOS | Windows | Android | iOS |
-|---|---|---|---|---|
-| ✅ | ✅ | ✅ | ✅ | ✅ |
-
-The native library is built from source with `cargo` (Rust toolchain required). On desktop the
-loader finds `rust/target/{debug,release}/libirohdart_ffi.so` automatically (or pass an explicit
-`libraryPath:`); on mobile, cross-compile the cdylib (Android) / staticlib (iOS) and bundle it the
-way your host app expects.
-
-## API surface
-
-- **Identity & addressing** - `SecretKey`, `PublicKey` / `EndpointId`, `Signature`, `EndpointAddr`,
-  `RelayUrl`, `RelayMode`, `RelayMap`.
-- **Endpoint** - `Endpoint.bind({secretKey, alpns, relayMode})`, `close`, `isClosed`, `setAlpns`,
-  `boundSockets`, `addr`, `connect`, `accept`, `acceptIncoming`.
-- **Connection & streams** - `openBi`/`openUni`/`acceptBi`/`acceptUni`, datagrams, `stats`,
-  `remoteId`, `alpn`, `closed`; `SendStream` (`writeAll`/`finish`/`reset`),
-  `RecvStream` (`read`/`readExact`/`readToEnd`/`stop`).
-- **Accept filter** - `Incoming` (`remoteAddr`, `accept`/`refuse`/`retry`/`ignore`).
-- **Reactive streams** - `Endpoint.watchAddr()`, `Endpoint.homeRelayStatus()`,
-  `Connection.pathEvents()` (sealed `PathEvent`).
-- **Multi-protocol routing** - `Endpoint.router()` -> `RouterBuilder.accept(alpn, handler)` ->
-  `spawn()`/`Router.shutdown()`: register a Dart handler per ALPN and let iroh's `Router` dispatch.
-- **Custom address lookup** - `Endpoint.bindWithAddressLookup(resolve:)`: dial peers known only by
-  their `EndpointId`, resolving their `EndpointAddr` in Dart.
-
-> **Lazy-stream footgun:** a freshly opened `SendStream` is invisible to the peer until the first
-> `writeAll`.
-
-Run the bundled headless example (`dart run`, no Flutter):
-
-```sh
-cd rust && cargo build --release && cd ..
-dart pub get
-dart run example/echo.dart
+pubspec.yaml                      workspace root + Melos config (no melos.yaml)
+tool/sync_native.sh               vendors the shared crate into the plugin (cargokit needs it co-located)
+packages/
+  iroh_quic/                      pure-Dart binding (publishable)
+    rust/                         the owned `irohdart_ffi` crate (canonical source of truth)
+    lib/  bin/  test/  tool/
+  iroh_flutter/                   Flutter plugin (publishable)
+    android/ ios/ macos/ linux/ windows/   cargokit native build per platform
+    cargokit/                     vendored build glue
+    rust/                         generated copy of the crate (gitignored; from sync_native.sh)
+    example/                      example app + on-device integration tests
 ```
 
 ## Develop
 
 ```sh
-dart pub get
-cargo install flutter_rust_bridge_codegen --version '^2'  # standalone cargo binary
-./tool/frb_codegen.sh   # regen FRB glue after editing rust/src/api/*
-./tool/check.sh         # cargo build+test, then dart analyze + dart test
+dart pub global activate melos          # optional; plain pub get also works
+flutter pub get                         # resolves the whole workspace
+bash tool/sync_native.sh                # vendor the crate into iroh_flutter (also run by `melos bootstrap`)
+
+# Pure-Dart gate (Rust + Dart tests for iroh_quic):
+./packages/iroh_quic/tool/check.sh
+
+# Flutter plugin (build the example for any platform):
+cd packages/iroh_flutter/example && flutter run -d macos   # or an iOS sim / Android emulator
 ```
 
-Requires Rust >= 1.91 (edition 2024; pinned to 1.96.0) and, for Android, NDK r28+.
+The single source of truth for the Rust crate is `packages/iroh_quic/rust`. cargokit requires the
+crate beside the plugin, so `tool/sync_native.sh` mirrors it into `packages/iroh_flutter/rust` (which
+is gitignored and re-vendored before publishing).
+
+## Native library distribution
+
+- **iroh_quic (desktop):** signed prebuilt cdylibs are built per release, Ed25519-signed, and
+  attached to the GitHub Release; `dart run iroh_quic:setup` downloads + verifies one. No Rust
+  toolchain needed. Or `dart run iroh_quic:build` to compile from source.
+- **iroh_flutter (mobile/desktop):** cargokit compiles the crate during the consumer's app build (no
+  download); force `cargokit_options.yaml: use_precompiled_binaries: false` to always build from
+  source.
+
+See each package's README for details.
 
 ## License
 
-Apache-2.0 - see [`LICENSE`](LICENSE). The `iroh` crate is MIT OR Apache-2.0.
+Apache-2.0 — see [LICENSE](LICENSE).

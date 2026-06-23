@@ -1,28 +1,48 @@
-name: iroh_dart
-description: >-
-  Pure-Dart binding for iroh 1.0 - peer-to-peer QUIC networking with endpoints,
-  connections, streams, relays, and address lookup over the Rust core. No
-  Flutter: the native cdylib is built with cargo and loaded via dart:ffi
-  (flutter_rust_bridge runtime, pure-Dart mode).
-version: 1.0.1
-homepage: https://github.com/snowpinelabs/iroh_dart
-repository: https://github.com/snowpinelabs/iroh_dart
-issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
-topics:
-  - iroh
-  - p2p
-  - networking
-  - quic
-  - ffi
+# Repo-root pub workspace (Dart 3.6+) + Melos config. This file is NOT a publishable package; it
+# only ties the members together so one `dart pub get` (or `flutter pub get`) at the root resolves
+# them all into a single pubspec.lock + .dart_tool/package_config.json.
+#
+#   packages/iroh_quic    - pure-Dart binding (publishable): API, FFI loader, prebuilt installer.
+#   packages/iroh_flutter - Flutter plugin (publishable): builds the native lib per platform.
+#
+# Members reference each other by hosted version constraint (e.g. iroh_quic: ^1.0.1), which resolves
+# to the local copy inside the workspace and to pub.dev for external consumers.
+name: iroh_workspace
+publish_to: none
 
 environment:
   sdk: ^3.12.0
 
-dependencies:
-  # Runtime half of flutter_rust_bridge (pure-Dart; depends only on
-  # args/async/meta/path/web — no Flutter). Version MUST match the codegen.
-  flutter_rust_bridge: 2.12.0
+workspace:
+  - packages/iroh_quic
+  - packages/iroh_flutter
+  - packages/iroh_flutter/example
 
 dev_dependencies:
-  lints: ^5.0.0
-  test: ^1.25.0
+  # Monorepo task runner (scripts/versioning). Melos 7+ uses native pub workspaces; no melos.yaml.
+  melos: ^8.0.0
+
+# Melos configuration (lives here under the `melos:` key since Melos 7 removed melos.yaml).
+melos:
+  scripts:
+    analyze:
+      description: Analyze every package.
+      exec:
+        command: dart analyze --fatal-infos
+        concurrency: 1
+    test:
+      description: Run tests in packages that have a test/ dir.
+      exec:
+        command: dart test
+      packageFilters:
+        dirExists: test
+    # Vendor the canonical Rust crate (packages/iroh_quic/rust) into the Flutter plugin so cargokit
+    # finds it at `../rust`. Run after editing the crate and before publishing iroh_flutter.
+    sync-native:
+      description: Mirror the shared Rust crate into packages/iroh_flutter (cargokit needs it co-located).
+      run: bash tool/sync_native.sh
+  command:
+    bootstrap:
+      hooks:
+        # Keep the plugin's vendored crate in sync automatically after every bootstrap.
+        post: bash tool/sync_native.sh

@@ -1,0 +1,34 @@
+name: iroh_quic
+description: >-
+  Pure-Dart binding for iroh 1.0 - peer-to-peer QUIC networking with endpoints,
+  connections, streams, relays, and address lookup over the Rust core. No
+  Flutter: load a signed prebuilt native library via `dart run iroh_quic:setup`
+  (or build it with cargo), loaded over dart:ffi (flutter_rust_bridge runtime).
+version: 1.0.1
+homepage: https://github.com/snowpinelabs/iroh_dart
+repository: https://github.com/snowpinelabs/iroh_dart
+issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
+topics:
+  - iroh
+  - p2p
+  - networking
+  - quic
+  - ffi
+
+environment:
+  sdk: ^3.12.0
+
+# Member of the repo-root pub workspace (see /pubspec.yaml). Shared resolution + single root lock.
+resolution: workspace
+
+dependencies:
+  # Ed25519 verification of the signed prebuilt native library downloaded by
+  # `dart run iroh_quic:setup` (bin/setup.dart); also used by tool/sign_prebuilt.dart.
+  cryptography: ^2.9.0
+  # Runtime half of flutter_rust_bridge (pure-Dart; depends only on
+  # args/async/meta/path/web — no Flutter). Version MUST match the codegen.
+  flutter_rust_bridge: 2.12.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0
