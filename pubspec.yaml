@@ -1,0 +1,45 @@
+name: iroh_dart
+description: >-
+  Dart/Flutter binding for iroh 1.0 - peer-to-peer QUIC networking (endpoints, connections,
+  streams, relays, address lookup) over the shared Rust core. Wraps iroh; does not re-port it.
+version: 1.0.0
+homepage: https://github.com/snowpinelabs/iroh_dart
+repository: https://github.com/snowpinelabs/iroh_dart
+issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
+topics:
+  - iroh
+  - p2p
+  - networking
+  - quic
+  - ffi
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Runtime half of flutter_rust_bridge - version MUST match the codegen (2.12.0).
+  flutter_rust_bridge: 2.12.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    # FFI plugin (no per-platform Dart classes): cargokit hooks the Rust build into each
+    # platform's native build; the loader resolves the symbol via dart:ffi.
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      macos:
+        ffiPlugin: true
+      linux:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true

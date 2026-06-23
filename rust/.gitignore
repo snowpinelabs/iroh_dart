@@ -1,0 +1,3 @@
+/target
+# Cargo.lock is committed: this crate ships native code, so we pin the exact dependency tree
+# (the one verified on iOS/Android) for reproducible builds.

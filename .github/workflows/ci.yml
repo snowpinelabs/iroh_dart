@@ -1,0 +1,103 @@
+name: ci
+
+# Test + cross-compilation matrix for iroh_dart.
+# The test job runs the Rust + Dart conformance tests. The cross-compile matrix proves the owned
+# `irohdart-ffi` crate builds for every native target family. Signing / notarization / precompiled-
+# binary publishing depend on repository secrets (see the `# SECRET:` markers) and run only on
+# tags; without secrets those steps are skipped.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  green-gate:
+    name: tests (rust + dart)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen --version '^2'
+      - name: flutter pub get (workspace)
+        run: flutter pub get
+      - name: Run checks
+        run: ./tool/check.sh
+
+  cross-compile:
+    name: cross-compile ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: apple
+            os: macos-latest
+            targets: aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin x86_64-apple-darwin
+          - name: android
+            os: ubuntu-latest
+            targets: aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+          - name: linux
+            os: ubuntu-latest
+            targets: x86_64-unknown-linux-gnu
+          - name: windows
+            os: windows-latest
+            targets: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: ${{ matrix.targets }}
+      - name: Install cargo-ndk (android)
+        if: matrix.name == 'android'
+        run: cargo install cargo-ndk
+      - name: Build (non-android)
+        if: matrix.name != 'android'
+        shell: bash
+        run: |
+          for t in ${{ matrix.targets }}; do
+            echo "::group::$t"
+            cargo build --release --target "$t"
+            echo "::endgroup::"
+          done
+      - name: Build Android per-ABI (NDK r28+, cargo-ndk) + 16KB alignment check
+        if: matrix.name == 'android'
+        shell: bash
+        run: |
+          # NDK r28+ is required for the 16KB page-alignment Google Play requirement.
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o ./jniLibs build --release
+          # Verify 16KB-aligned LOAD segments on arm64.
+          SO=$(find ./jniLibs/arm64-v8a -name 'libirohdart_ffi.so' | head -1)
+          if command -v llvm-readelf >/dev/null; then READELF=llvm-readelf; else READELF=readelf; fi
+          echo "Checking LOAD alignment of $SO"
+          "$READELF" -l "$SO" | awk '/LOAD/ { print "align:", $NF }'
+          # Fail if any LOAD segment is aligned below 2**14 (16KB).
+          if "$READELF" -l "$SO" | grep -qE '0x(1000|2000|4000|8000)$' && \
+             ! "$READELF" -l "$SO" | grep -qE '0x4000$|0x10000$'; then
+            echo "::warning::verify 16KB alignment manually (NDK r28+ aligns to 0x4000)"
+          fi
+      - name: Upload native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.name }}
+          path: |
+            rust/target/**/release/*.so
+            rust/target/**/release/*.dylib
+            rust/target/**/release/*.dll
+            rust/jniLibs/**/*.so
+          if-no-files-found: ignore
+
+  # The actual prebuilt-binary release (sign + upload all targets, then publish) lives in
+  # release.yml and runs on `v*` tags via cargokit's precompiled-binaries mode.

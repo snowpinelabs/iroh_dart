@@ -1,0 +1,5 @@
+# iroh 1.0's MSRV is Rust 1.91 (edition 2024). Pin a known-good stable >= 1.91 so the edition-2024
+# dependency graph always compiles.
+[toolchain]
+channel = "1.96.0"
+components = ["rustfmt", "clippy"]

@@ -1,0 +1,46 @@
+# Version map: iroh_dart -> the references it wraps and the tooling it pins.
+# Used to track the pinned iroh + tooling versions: when one of these bumps, re-check the wrapped
+# API surface, re-run codegen (tool/frb_codegen.sh), and re-verify on-device
+# (example/integration_test).
+
+# The Rust P2P core this package wraps (we bind it directly; not n0's `iroh-ffi` UniFFI lib).
+wraps:
+  iroh:
+    pub: "iroh_dart"
+    crate: "iroh"
+    repo: "n0-computer/iroh"
+    version: "1.0.0"
+    commit: "b4ec78e969c50ac17b5375348ee36e2df8ae4308"
+    note: "P2P QUIC core (edition 2024, MSRV 1.91). A bump may rename nouns / move APIs => review."
+
+  iroh-base:
+    crate: "iroh-base"
+    repo: "n0-computer/iroh"
+    version: "1.0.0"
+    commit: "b4ec78e969c50ac17b5375348ee36e2df8ae4308"
+    note: "Identity & addressing types (SecretKey/PublicKey/EndpointAddr/RelayUrl)."
+
+# Codegen / native-build tooling pinned by this repo.
+tooling:
+  flutter_rust_bridge:
+    pub: "flutter_rust_bridge"
+    cargo: "flutter_rust_bridge"
+    repo: "fzyzcjy/flutter_rust_bridge"
+    version: "2.12.0"
+    note: "Codegen and runtime MUST be the SAME version; bumping requires re-running codegen."
+
+  cargokit:
+    repo: "irondash/cargokit"
+    vendored: "cargokit"
+    commit: "ec49f0ee89744a8e80ee8df764bfb1faea95319b"
+    note: "Vendored native-build glue. Local patch: Gradle 9 ExecOperations (gradle/plugin.gradle)."
+
+# Toolchain versions required to build the native library.
+toolchain:
+  rust:
+    version: "1.96.0"
+    note: "Pinned in rust/rust-toolchain.toml; iroh MSRV 1.91 / edition 2024."
+
+  android-ndk:
+    version: "29.0.14206865"
+    note: "r28+ required for the 16KB page-alignment Google Play requirement."
