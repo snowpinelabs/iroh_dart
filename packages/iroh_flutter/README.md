@@ -37,7 +37,11 @@ The API is identical to `iroh_quic`; see its
 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 - **Android:** cargokit cross-compiles a per-ABI cdylib via `cargo-ndk` into `jniLibs` (NDK r28+ for
-  the 16 KB page-alignment Google Play requirement). `minSdk` 24.
+  the 16 KB page-alignment Google Play requirement). `minSdk` 24. The plugin registers a tiny
+  `IrohFlutterPlugin` class that hands the application `Context` to the native library during
+  engine startup — iroh needs it over JNI for system DNS, interface enumeration, and TLS trust.
+  Nothing to configure; but if you build a custom engine setup that skips plugin registration,
+  make sure `IrohFlutterPlugin` is registered before the first iroh call.
 - **iOS / macOS:** cargokit builds a staticlib and `-force_load`s it into the plugin framework, so
   the FFI symbols are visible to `DynamicLibrary.process()`. iOS 13+ / macOS 11+.
 - **Linux / Windows:** cargokit builds a cdylib bundled next to the app.

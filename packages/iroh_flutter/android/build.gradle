@@ -1,6 +1,8 @@
-// Android build for the iroh_flutter FFI plugin. cargokit cross-compiles the owned
+// Android build for the iroh_flutter plugin. cargokit cross-compiles the owned
 // `irohdart-ffi` crate (at the repo root) via cargo-ndk and stages per-ABI .so into jniLibs.
 // NDK r28+ is required for the 16KB page-alignment Google Play requirement.
+import groovy.json.JsonSlurper
+
 group = "io.snowpine.iroh_flutter"
 version = "1.0.0"
 
@@ -14,10 +16,20 @@ buildscript {
     }
 }
 
+// The consuming app project resolves this plugin's transitive dependencies with ITS OWN
+// repository list, so the rustls-platform-verifier repo must be injected into every project
+// (same reason google()/mavenCentral() are), not declared in this module's `repositories`
+// block. Resolve the path once - the closure below runs per project.
+def rustlsPlatformVerifierRepo = findRustlsPlatformVerifierProject()
+
 rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = rustlsPlatformVerifierRepo
+            metadataSources.artifact()
+        }
     }
 }
 
@@ -30,6 +42,9 @@ android {
 
     defaultConfig {
         minSdk = 24
+        // rustls-platform-verifier's Kotlin classes are only reachable through JNI name lookups,
+        // so R8 must be told to keep them in the consuming app's release builds.
+        consumerProguardFiles "consumer-rules.pro"
     }
 }
 
@@ -40,4 +55,32 @@ apply from: "../cargokit/gradle/plugin.gradle"
 cargokit {
     manifestDir = "../rust"
     libname = "irohdart_ffi"
+}
+
+// iroh verifies TLS certificates (pkarr HTTPS publishing, relay probes) through the
+// rustls-platform-verifier crate, whose runtime needs a small Kotlin component in the app. The
+// version-matched AAR ships inside the crate itself; expose it as a local Maven repository, as
+// documented by upstream (https://github.com/rustls/rustls-platform-verifier#android).
+String findRustlsPlatformVerifierProject() {
+    def cargoManifest = file("../rust/Cargo.toml").absolutePath
+    def metadataText
+    try {
+        metadataText = providers.exec {
+            commandLine("cargo", "metadata", "--format-version", "1",
+                    "--filter-platform", "aarch64-linux-android",
+                    "--manifest-path", cargoManifest)
+        }.standardOutput.asText.get()
+    } catch (Exception e) {
+        throw new GradleException(
+                "iroh_flutter: 'cargo metadata' failed - the Rust toolchain (cargo) must be on " +
+                "PATH to build this plugin (cargokit needs it for the native build as well): " +
+                e.message, e)
+    }
+    def metadata = new JsonSlurper().parseText(metadataText)
+    def manifestPath = file(metadata.packages.find { it.name == "rustls-platform-verifier-android" }.manifest_path)
+    return new File(manifestPath.parentFile, "maven").path
+}
+
+dependencies {
+    implementation "rustls:rustls-platform-verifier:latest.release"
 }

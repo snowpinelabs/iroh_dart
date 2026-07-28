@@ -36,9 +36,16 @@ flutter:
   plugin:
     # FFI plugin (no per-platform Dart classes): cargokit hooks the Rust build into each platform's
     # native build, and iroh_quic's loader resolves the symbols via dart:ffi.
+    #
+    # Android is the one platform with a real plugin class: iroh needs the app's JavaVM +
+    # Context over JNI (system DNS, interface enumeration, TLS trust). IrohFlutterPlugin hands
+    # them to the native lib during engine startup - before Dart can call the FFI - which fixes
+    # the release-build abort "android context was not initialized" (issue #8). The cargokit
+    # native build is hooked from android/build.gradle either way.
     platforms:
       android:
-        ffiPlugin: true
+        package: io.snowpine.iroh_flutter
+        pluginClass: IrohFlutterPlugin
       ios:
         ffiPlugin: true
       macos:

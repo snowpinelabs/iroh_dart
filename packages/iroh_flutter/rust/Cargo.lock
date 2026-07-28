@@ -1796,8 +1796,11 @@ dependencies = [
  "futures",
  "iroh",
  "iroh-base",
+ "iroh-dns",
+ "jni 0.22.4",
  "n0-future",
  "postcard",
+ "rustls-platform-verifier",
  "tokio",
 ]
 
