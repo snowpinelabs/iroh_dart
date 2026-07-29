@@ -3,7 +3,7 @@
 # kebab) so the package name matches the produced lib artifact
 # (`libirohdart_ffi.a`/`.dylib`/`.so`/`.dll`), which the loader + installer look up by name.
 name = "irohdart_ffi"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 publish = false
 rust-version = "1.91"
