@@ -6,9 +6,18 @@ name: release
 #   3. prebuilt (matrix)  - build the iroh_quic native cdylib for every desktop target, Ed25519-sign,
 #                           and upload `irohdart_ffi-<target>.<ext>` + `.sig` to the Release. Pure-Dart
 #                           consumers then `dart run iroh_quic:setup` to download + verify a binary.
-#   4. publish-iroh-quic  - publish packages/iroh_quic to pub.dev (OIDC).
-#   5. publish-iroh-flutter - vendor the shared crate, then publish packages/iroh_flutter (depends on
-#                           the now-hosted iroh_quic).
+#   4. publish-iroh-quic  - publish packages/iroh_quic to pub.dev via dart-lang/setup-dart's reusable
+#                           publish workflow (OIDC; the pub.dev environment must have "Automated
+#                           publishing" enabled — plain `flutter/dart pub publish` only supports
+#                           interactive Google-SSO login, which can't run non-interactively in CI).
+#   verify-flutter-native-mirror - fails the release if packages/iroh_flutter/rust has drifted from
+#                           the canonical packages/iroh_quic/rust (tool/sync_native.sh output).
+#                           Runs in its own job since the publish jobs below are reusable-workflow
+#                           calls and can't carry extra steps.
+#   wait-for-pub-dev-index - brief pause so pub.dev has indexed the just-published iroh_quic before
+#                           iroh_flutter (which depends on it) tries to publish.
+#   5. publish-iroh-flutter - publish packages/iroh_flutter to pub.dev the same way, once the mirror
+#                           is verified and iroh_quic is indexed.
 #   6. github-release     - finalise the Release notes from packages/iroh_quic/CHANGELOG.md.
 #
 # Android/iOS ship no prebuilt (not `dart run` targets): the iroh_flutter plugin compiles the crate
@@ -135,46 +144,48 @@ jobs:
           for a in "${assets[@]}"; do uploads+=("$a" "$a.sig"); done
           gh release upload "$tag" "${uploads[@]}" --clobber --repo "$GITHUB_REPOSITORY"
 
+  # dart-lang/setup-dart's reusable workflow provisions the pub.dev OIDC token itself (the
+  # `flutter pub publish` steps this replaced only supported interactive Google-SSO login, which
+  # can't run non-interactively in CI). It's a reusable-workflow *call* job, so it can't carry extra
+  # steps of its own — the native-crate sync is verified in a separate job below instead.
   publish-iroh-quic:
     name: publish iroh_quic to pub.dev
     needs: prebuilt
+    permissions:
+      id-token: write   # Required for authentication using OIDC
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
+      working-directory: packages/iroh_quic
+
+  verify-flutter-native-mirror:
+    name: verify iroh_flutter/rust mirror is in sync
+    needs: prebuilt
     runs-on: ubuntu-latest
-    environment: pub.dev   # OIDC: short-lived pub.dev creds, no stored token
     steps:
       - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable }
-      - run: flutter pub get
-      - name: Publish iroh_quic
-        working-directory: packages/iroh_quic
-        run: flutter pub publish --force
+      - run: bash tool/sync_native.sh
+      - name: Fail if packages/iroh_flutter/rust is out of sync with packages/iroh_quic/rust
+        run: git diff --exit-code -- packages/iroh_flutter/rust
+
+  # pub.dev takes a little while to index a freshly published package; iroh_flutter depends on the
+  # iroh_quic version just published above, so give it a head start before publishing.
+  wait-for-pub-dev-index:
+    name: wait for pub.dev to index iroh_quic
+    needs: publish-iroh-quic
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 60
 
   publish-iroh-flutter:
     name: publish iroh_flutter to pub.dev
-    needs: publish-iroh-quic
-    runs-on: ubuntu-latest
-    environment: pub.dev
-    steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable }
-      # Vendor the shared crate into the plugin so the published archive is self-contained.
-      - run: bash tool/sync_native.sh
-      - run: flutter pub get
-      - name: Publish iroh_flutter (retry while pub.dev indexes the just-published iroh_quic)
-        working-directory: packages/iroh_flutter
-        shell: bash
-        run: |
-          set -uo pipefail
-          for attempt in 1 2 3 4 5; do
-            if flutter pub publish --force; then
-              echo "published on attempt $attempt"; exit 0
-            fi
-            echo "publish attempt $attempt failed (iroh_quic may not be indexed yet); waiting 60s..."
-            sleep 60
-          done
-          echo "iroh_flutter publish failed after retries" >&2
-          exit 1
+    needs: [wait-for-pub-dev-index, verify-flutter-native-mirror]
+    permissions:
+      id-token: write   # Required for authentication using OIDC
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
+      working-directory: packages/iroh_flutter
 
   github-release:
     name: github release page
