@@ -1,12 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.0.2
 
 - **Rust core (Android):** new JNI bootstrap in `irohdart_ffi` (`src/android.rs`) exporting
   `IrohFlutterPlugin.initAndroidContext`, which installs the app's `JavaVM` + `Context` into
   `ndk-context` and initializes `rustls-platform-verifier`. Fixes the release-build abort
-  `android context was not initialized` on `Endpoint.bind` under `iroh_flutter`
-  ([#8](https://github.com/snowpinelabs/iroh_dart/issues/8)). No behavior change off Android.
+  `android context was not initialized` on `Endpoint.bind` under `iroh_flutter`.
 
 ## 1.0.1 - Dart-only (Flutter dropped)
 

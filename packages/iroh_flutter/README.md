@@ -13,7 +13,7 @@ automatically by cargokit on first build if you don't already have one.
 
 ```yaml
 dependencies:
-  iroh_flutter: ^1.0.1
+  iroh_flutter: ^1.0.2
 ```
 
 ```dart

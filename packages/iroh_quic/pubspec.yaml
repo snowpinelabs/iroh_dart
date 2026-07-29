@@ -4,7 +4,7 @@ description: >-
   connections, streams, relays, and address lookup over the Rust core. No
   Flutter: load a signed prebuilt native library via `dart run iroh_quic:setup`
   (or build it with cargo), loaded over dart:ffi (flutter_rust_bridge runtime).
-version: 1.0.1
+version: 1.0.2
 homepage: https://github.com/snowpinelabs/iroh_dart
 repository: https://github.com/snowpinelabs/iroh_dart
 issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
