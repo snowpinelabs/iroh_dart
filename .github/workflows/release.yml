@@ -146,7 +146,8 @@ jobs:
         with: { channel: stable }
       - run: flutter pub get
       - name: Publish iroh_quic
-        run: flutter pub -C packages/iroh_quic publish --force
+        working-directory: packages/iroh_quic
+        run: flutter pub publish --force
 
   publish-iroh-flutter:
     name: publish iroh_flutter to pub.dev
@@ -161,11 +162,12 @@ jobs:
       - run: bash tool/sync_native.sh
       - run: flutter pub get
       - name: Publish iroh_flutter (retry while pub.dev indexes the just-published iroh_quic)
+        working-directory: packages/iroh_flutter
         shell: bash
         run: |
           set -uo pipefail
           for attempt in 1 2 3 4 5; do
-            if flutter pub -C packages/iroh_flutter publish --force; then
+            if flutter pub publish --force; then
               echo "published on attempt $attempt"; exit 0
             fi
             echo "publish attempt $attempt failed (iroh_quic may not be indexed yet); waiting 60s..."
