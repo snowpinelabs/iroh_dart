@@ -1,11 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.0.2
 
 - **Android:** fix release-build abort `android context was not initialized` on the first
-  `Endpoint.bind` ([#8](https://github.com/snowpinelabs/iroh_dart/issues/8)). The plugin now
-  registers an `IrohFlutterPlugin` class that installs the app's `JavaVM` + `Context` into the
-  native library (ndk-context for system DNS / interface enumeration) and initializes
+  `Endpoint.bind`. The plugin now registers an `IrohFlutterPlugin` class that installs
+  the app's `JavaVM` + `Context` into the native library and initializes
   `rustls-platform-verifier` (bundling its Kotlin component) before any Dart code runs.
 
 ## 1.0.1
