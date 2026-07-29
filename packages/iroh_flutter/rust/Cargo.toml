@@ -39,6 +39,15 @@ postcard = { version = "1", features = ["use-std"] }
 # Datagram payloads cross as bytes::Bytes (Connection::send_datagram/read_datagram).
 bytes = "1"
 
+# Android bootstrap (src/android.rs): iroh reads system DNS / network state / TLS trust through
+# JNI, which needs the app's JavaVM + Context installed before the first Endpoint. jni is the
+# same 0.22 line rustls-platform-verifier uses; iroh-dns provides the documented
+# install_android_jni_context entry point (the ndk-context instance shared with netdev/hickory).
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.22"
+iroh-dns = "1.0"
+rustls-platform-verifier = "0.7"
+
 # Dev/debug builds (used by `cargo test` and local `cargo build`) carry no debuginfo -
 # the full iroh QUIC stack's debug symbols are multi-GB and aren't needed to pass tests or run the
 # example. Keeps the simulator/emulator build disk-friendly.
