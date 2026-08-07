@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+- **Windows/Linux:** fix the CMake generate failure `No target "iroh_flutter_plugin"` when
+  building an app that depends on the plugin. The desktop builds declared the bundled library
+  with the non-FFI-plugin `$<TARGET_FILE_DIR:...>` expression; they now use the library path
+  cargokit exports, so the Rust cdylib builds and bundles correctly on both platforms.
+
 ## 1.0.2
 
 - **Android:** fix release-build abort `android context was not initialized` on the first

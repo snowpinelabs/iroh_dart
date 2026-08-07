@@ -11,7 +11,7 @@ import 'dart:io' show Platform;
 /// MUST match `version:` in pubspec.yaml: the installer downloads the signed assets from the
 /// `v$kIrohdartLibVersion` GitHub Release, and the cache is keyed by this version so upgrades
 /// re-download rather than load a stale library.
-const String kIrohdartLibVersion = '1.0.2';
+const String kIrohdartLibVersion = '1.0.3';
 
 /// Base URL of the GitHub Release that hosts the signed prebuilt libraries.
 const String kPrebuiltUrlPrefix =
