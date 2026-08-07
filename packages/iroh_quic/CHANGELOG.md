@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3
+
+- Loosen the `flutter_rust_bridge` runtime dependency to `^2.12.0` (was pinned to `2.12.0`).
+- Version bump in lockstep with `iroh_flutter` 1.0.3 (Windows/Linux desktop build fix); no
+  changes to the Dart/Rust API.
+
 ## 1.0.2
 
 - **Rust core (Android):** new JNI bootstrap in `irohdart_ffi` (`src/android.rs`) exporting
