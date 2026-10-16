@@ -1,35 +1,39 @@
-//! Reactive-stream mirror types.
+//! Value types for the reactive streams.
 //!
-//! The streaming methods live on the opaque `Endpoint`/`Connection` (in `endpoint.rs`/
-//! `connection.rs`); this module holds the Dart-shaped value types they emit and the
-//! `#[non_exhaustive]`-safe mapping for `PathEvent` (never matched exhaustively).
+//! The stream methods are on the opaque `Endpoint` type in `endpoint.rs` and on the opaque
+//! `Connection` type in `connection.rs`. This module contains the value types that these streams
+//! send to Dart. It also contains the conversion for the `#[non_exhaustive]` iroh `PathEvent` enum.
+//! This conversion never matches the enum exhaustively.
 //!
-//! `PathEvent` is kept **flat** (a unit `PathEventKind` + a struct) rather than a data-carrying
-//! enum so FRB does not pull in `freezed`/`build_runner`; the Dart wrapper (`watch.dart`) re-presents
-//! it as a proper sealed `PathEvent`.
+//! [`PathEventInfo`] is a flat struct with the unit enum [`PathEventKind`]. It is not an enum that
+//! carries data, so FRB does not need `freezed` or `build_runner`. The Dart wrapper in
+//! `watch.dart` shows the event as a sealed `PathEvent` class.
 
 use flutter_rust_bridge::frb;
 use iroh::endpoint::PathEvent;
 
-/// Cancels a reactive stream (watchAddr / homeRelayStatus / pathEvents) by its token. Invoked from
-/// the Dart subscription's `onCancel` so a cancelled subscription promptly drops the iroh watcher
-/// (no leak, no hang).
+/// Cancels a reactive stream by its token. The reactive streams are `watchAddr`,
+/// `homeRelayStatus`, and `pathEvents`. The `onCancel` handler of the Dart subscription calls this
+/// function. The stream task then stops and releases its iroh watcher or event stream
+/// immediately. Thus the subscription does not leak resources or hang.
 #[frb(sync)]
 pub fn cancel_stream(token: u64) {
     crate::runtime::abort_stream(token);
 }
 
-/// One relay server's connection status (a `homeRelayStatus` update carries a list of these).
+/// The connection status of one home relay server. A `homeRelayStatus` update contains a list of
+/// these values.
 pub struct RelayStatusInfo {
     pub url: String,
     pub connected: bool,
     pub last_error: Option<String>,
     /// The reason that the relay server gave when it denied the authentication of the endpoint.
-    /// This failure does not usually go away with retries.
+    /// Retries do not usually fix this failure.
     pub auth_denied_reason: Option<String>,
 }
 
-/// Discriminant for [`PathEventInfo`]. `Unknown` absorbs any future `#[non_exhaustive]` variant.
+/// The kind of a [`PathEventInfo`]. `Unknown` holds each variant that a future iroh version adds to
+/// the `#[non_exhaustive]` iroh enum.
 pub enum PathEventKind {
     Opened,
     Closed,
@@ -38,16 +42,17 @@ pub enum PathEventKind {
     Unknown,
 }
 
-/// A path lifecycle event on a connection, in flat form. `remote_addr` is set for
-/// `Opened`/`Closed`/`Selected`; `missed` is set for `Lagged`.
+/// A path lifecycle event of a connection, in flat form. `remote_addr` has a value for `Opened`,
+/// `Closed`, and `Selected`. `missed` has a value for `Lagged`. It is the number of events that
+/// the stream dropped.
 pub struct PathEventInfo {
     pub kind: PathEventKind,
     pub remote_addr: Option<String>,
     pub missed: Option<u64>,
 }
 
-/// Maps iroh's `#[non_exhaustive]` `PathEvent` onto [`PathEventInfo`]. The `..` rest-patterns and the
-/// trailing `_` arm keep this forward-compatible across minor iroh bumps.
+/// Maps the `#[non_exhaustive]` iroh `PathEvent` to a [`PathEventInfo`]. The `..` rest patterns
+/// and the last `_` arm keep this function compatible with new minor iroh versions.
 pub(crate) fn map_path_event(event: PathEvent) -> PathEventInfo {
     match event {
         PathEvent::Opened { remote_addr, .. } => PathEventInfo {

@@ -1,6 +1,6 @@
-/// Reactive state as Dart `Stream`s. Value types emitted by `Endpoint.watchAddr`,
-/// `Endpoint.homeRelayStatus`, and `Connection.pathEvents`. The streams are driven by FRB
-/// `StreamSink`s; cancelling a subscription drops the underlying iroh watcher (no leak).
+/// The value types that the watch streams send: `Endpoint.watchAddr`, `Endpoint.homeRelayStatus`,
+/// and `Connection.pathEvents`. An FRB `StreamSink` in the crate gives the values to each stream.
+/// When you cancel a subscription, the crate stops the iroh watcher.
 library;
 
 /// A relay server's connection status, emitted by `Endpoint.homeRelayStatus`.
@@ -15,15 +15,15 @@ final class RelayStatus {
   /// The relay server URL.
   final String url;
 
-  /// Whether the endpoint is currently connected to this relay.
+  /// Whether the endpoint has a connection to this relay server at this time.
   final bool connected;
 
-  /// The most recent connection error, for logs or display only. Do not match on the text.
+  /// The last connection error. Use it only for logs or display. Do not compare the text in code.
   final String? lastError;
 
   /// The reason that the relay server gave when it denied the authentication of this endpoint.
-  /// Retries do not usually correct this failure, so show it to the user. It is `null` when the
-  /// relay is connected, when no attempt failed, or when the last failure had a different cause.
+  /// Retries do not usually correct this failure, so show it to the user. It is `null` if the
+  /// relay server is connected, if no attempt failed, or if the last failure had a different cause.
   final String? authDeniedReason;
 
   @override
@@ -33,45 +33,49 @@ final class RelayStatus {
       '${authDeniedReason == null ? '' : ', authDenied: $authDeniedReason'})';
 }
 
-/// A path lifecycle event on a [Connection]. Sealed: switch over the subtypes. The
-/// relay-vs-direct transition is observable as a [PathSelected] carrying the new active address.
+/// An event about the network paths of a [Connection]. The class is sealed, so use a `switch` on
+/// the subtypes. A change between a relay path and a direct path shows as a [PathSelected] event.
+/// That event contains the new active address.
 sealed class PathEvent {
   const PathEvent();
 }
 
-/// A new network path was opened to [remoteAddr].
+/// The connection opened a new network path to [remoteAddr].
 final class PathOpened extends PathEvent {
   const PathOpened(this.remoteAddr);
 
-  /// Debug rendering of the remote transport address.
+  /// The remote transport address, as debug text.
   final String remoteAddr;
 }
 
-/// The network path to [remoteAddr] was closed.
+/// The network path to [remoteAddr] closed.
 final class PathClosed extends PathEvent {
   const PathClosed(this.remoteAddr);
 
-  /// Debug rendering of the remote transport address.
+  /// The remote transport address, as debug text.
   final String remoteAddr;
 }
 
-/// [remoteAddr] became the selected (active) path - a relay/direct transition.
+/// The connection selected the path to [remoteAddr] as its active path. For example, this event
+/// shows a change from a relay path to a direct path.
 final class PathSelected extends PathEvent {
   const PathSelected(this.remoteAddr);
 
-  /// Debug rendering of the now-active remote transport address.
+  /// The remote transport address of the active path, as debug text.
   final String remoteAddr;
 }
 
-/// Path events were dropped because the consumer fell behind; [missed] were lost.
+/// The stream did not send some path events because the listener was too slow. [missed] tells
+/// how many events the stream did not send.
 final class PathLagged extends PathEvent {
   const PathLagged(this.missed);
 
-  /// Number of path events that were dropped.
+  /// The number of path events that the stream did not send.
   final int missed;
 }
 
-/// A future iroh path-event variant not yet modelled by this binding (forward-compatibility).
+/// A path event from iroh that this binding does not know. It keeps the binding compatible with
+/// new iroh versions.
 final class PathUnknown extends PathEvent {
   const PathUnknown();
 }

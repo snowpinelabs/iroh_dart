@@ -1,9 +1,10 @@
-# Version map for the iroh_dart monorepo (packages/iroh_quic + packages/iroh_flutter) -> the
-# references it wraps and the tooling it pins. When one bumps, re-check the wrapped API surface,
-# re-run codegen (packages/iroh_quic/tool/frb_codegen.sh), and re-verify
-# (packages/iroh_quic/tool/check.sh + packages/iroh_flutter/example/integration_test).
+# Version map for the iroh_dart monorepo (packages/iroh_quic and packages/iroh_flutter).
+# It shows the libraries that the monorepo wraps and the tools that it pins.
+# After you change a version, examine the wrapped API again.
+# Then run the codegen again (packages/iroh_quic/tool/frb_codegen.sh).
+# Then run packages/iroh_quic/tool/check.sh and packages/iroh_flutter/example/integration_test.
 
-# The Rust P2P core these packages wrap (bound directly; not n0's `iroh-ffi` UniFFI lib).
+# The Rust P2P core that the packages wrap. The crate binds iroh directly, not the n0 `iroh-ffi` UniFFI library.
 wraps:
   iroh:
     pub: "iroh_quic"
@@ -11,44 +12,44 @@ wraps:
     repo: "n0-computer/iroh"
     version: "1.3.0"
     commit: "0072d7d84b233f9e7185eb676f049beaf557ac03"
-    note: "P2P QUIC core (edition 2024, MSRV 1.91). A bump may rename nouns / move APIs => review."
+    note: "P2P QUIC core (edition 2024, MSRV 1.91). A new version can change names and APIs. Examine the API after each change."
 
   iroh-base:
     crate: "iroh-base"
     repo: "n0-computer/iroh"
     version: "1.3.0"
     commit: "0072d7d84b233f9e7185eb676f049beaf557ac03"
-    note: "Identity & addressing types (SecretKey/PublicKey/EndpointAddr/RelayUrl)."
+    note: "Identity and address types (SecretKey, PublicKey, EndpointAddr, RelayUrl)."
 
-# Codegen / native-build tooling pinned by this repo.
+# Codegen and native build tools that this repo pins.
 tooling:
   flutter_rust_bridge:
     pub: "flutter_rust_bridge"
     cargo: "flutter_rust_bridge"
     repo: "fzyzcjy/flutter_rust_bridge"
     version: "2.13.0"
-    note: "Codegen and runtime MUST be the SAME version; bumping requires re-running codegen."
+    note: "The codegen version and the runtime version must be the same. After a version change, run the codegen again."
 
   cryptography:
     pub: "cryptography"
-    note: "Ed25519 verify/sign for the prebuilt pipeline (iroh_quic bin/setup.dart, tool/sign_prebuilt.dart)."
+    note: "Ed25519 signatures for the prebuilt libraries. bin/setup.dart verifies them and tool/sign_prebuilt.dart makes them (in iroh_quic)."
 
   cargokit:
     repo: "irondash/cargokit"
     vendored: "packages/iroh_flutter/cargokit"
-    note: "Native-build glue for the Flutter plugin (Gradle/CocoaPods/CMake). Vendored via git subtree."
+    note: "Native build integration for the plugin (Gradle, CocoaPods, CMake). The repo keeps a vendored copy (git subtree)."
 
   melos:
     pub: "melos"
     version: "^8.9.0"
-    note: "Monorepo task runner; config under the `melos:` key in the root pubspec (no melos.yaml)."
+    note: "Monorepo task runner. Its configuration is under the `melos:` key in the root pubspec.yaml. There is no melos.yaml."
 
-# Toolchain versions required to build the native library.
+# Toolchain versions that the native library build requires.
 toolchain:
   rust:
     version: "1.96.0"
-    note: "Pinned in packages/iroh_quic/rust/rust-toolchain.toml; iroh MSRV 1.91 / edition 2024."
+    note: "packages/iroh_quic/rust/rust-toolchain.toml pins this version. iroh requires Rust 1.91 or later (edition 2024)."
 
   android-ndk:
     version: "29.0.14206865"
-    note: "r28+ required for the 16KB page-alignment Google Play requirement."
+    note: "Google Play requires 16KB page alignment. Only NDK r28 and later give this alignment. packages/iroh_flutter/android/build.gradle pins this version."

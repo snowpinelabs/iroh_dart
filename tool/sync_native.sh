@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Vendor the canonical Rust crate into the Flutter plugin.
+# Copy the crate into the plugin as the vendored crate.
 #
-# cargokit resolves the crate as `../rust` relative to the plugin's android/ios/macos/linux/windows
-# build files, so the crate MUST live inside packages/iroh_flutter. The single source of truth is
-# packages/iroh_quic/rust; this script mirrors it into packages/iroh_flutter/rust (which is
-# gitignored). Run automatically by the Melos `bootstrap` post-hook, and explicitly in release CI
-# before building/publishing iroh_flutter.
+# cargokit finds the crate at `../rust` from the android, ios, macos, linux, and windows directories.
+# Thus the crate must be in packages/iroh_flutter.
+# The source of the crate is packages/iroh_quic/rust.
+# This script copies it to packages/iroh_flutter/rust, the mirror. Git keeps the mirror.
+# The Melos `bootstrap` post-hook runs this script.
+# The ci and release workflows also run it and make sure that the mirror has no changes.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,12 +18,13 @@ if [ ! -d "$SRC" ]; then
   exit 1
 fi
 if [ ! -d "$ROOT/packages/iroh_flutter" ]; then
-  echo "sync_native: packages/iroh_flutter not present yet — nothing to sync."
+  echo "sync_native: packages/iroh_flutter not present yet - nothing to sync."
   exit 0
 fi
 
 echo "sync_native: mirroring $SRC -> $DST (excluding build output)"
 mkdir -p "$DST"
-# Mirror sources; never copy the multi-GB cargo target/ dir. --delete keeps the mirror exact.
+# Copy the source files. Do not copy the cargo target/ directory, which can be very large.
+# --delete removes files that are not in the source. Thus the mirror is an exact copy.
 rsync -a --delete --exclude 'target/' "$SRC/" "$DST/"
 echo "sync_native: done."

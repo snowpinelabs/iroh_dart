@@ -12,10 +12,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartAddressLookup`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `resolve`
 
-/// Binds an endpoint that uses a **Dart-implemented** address lookup (only): the n0 default DNS/pkarr
-/// lookup is cleared and replaced by `resolve`, so `connect`ing to a peer known only by its
-/// `EndpointId` calls back into Dart to discover its addresses. Otherwise identical to
-/// `endpoint_bind`.
+/// Binds an endpoint that uses only a Dart address lookup.
+///
+/// This function removes the default DNS and pkarr address lookup of the `presets::N0`
+/// configuration and uses `resolve` in its place. Thus, when you connect to a peer that you know
+/// only by its endpoint ID, the endpoint calls `resolve` to get the addresses of the peer.
+/// `resolve` receives the 32-byte endpoint ID. It returns the endpoint address parts, or `None` if
+/// it does not know the peer. All other behavior is the same as `endpoint_bind`.
+///
+/// Returns an error if `relay_mode_kind` is not valid, if `secret_key` does not have 32 bytes, or
+/// if the bind fails.
 Future<Endpoint> endpointBindWithAddressLookup({
   Uint8List? secretKey,
   required List<Uint8List> alpns,

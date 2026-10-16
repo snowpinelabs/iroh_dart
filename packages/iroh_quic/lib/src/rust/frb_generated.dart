@@ -3704,36 +3704,41 @@ class ConnectionImpl extends RustOpaque implements Connection {
         RustLib.instance.api.rust_arc_decrement_strong_count_ConnectionPtr,
   );
 
-  /// Accepts the next incoming bidirectional stream from the peer.
+  /// Accepts the next bidirectional stream that the peer opens.
   Future<(SendStream, RecvStream)> acceptBi() =>
       RustLib.instance.api.crateApiConnectionConnectionAcceptBi(that: this);
 
-  /// Accepts the next incoming unidirectional (receive-only) stream from the peer.
+  /// Accepts the next unidirectional stream that the peer opens. This stream can only receive.
   Future<RecvStream> acceptUni() =>
       RustLib.instance.api.crateApiConnectionConnectionAcceptUni(that: this);
 
-  /// The negotiated ALPN protocol for this connection.
+  /// Returns the ALPN protocol that the two endpoints negotiated for this connection.
   Uint8List alpn() => RustLib.instance.api.crateApiConnectionConnectionAlpn(that: this);
 
-  /// Closes the connection immediately with an application error code and reason.
+  /// Closes the connection immediately with an application error code and a reason.
   void close({required int errorCode, required List<int> reason}) => RustLib.instance.api
       .crateApiConnectionConnectionClose(that: this, errorCode: errorCode, reason: reason);
 
-  /// Waits until the connection is closed and returns the human-readable close reason.
+  /// Waits until the connection closes and returns the close reason in human-readable form.
   Future<String> closed() => RustLib.instance.api.crateApiConnectionConnectionClosed(that: this);
 
-  /// Opens a new bidirectional stream. Note the lazy-stream footgun: the peer does not observe
-  /// the stream until the first write on the returned [`SendStream`].
+  /// Opens a new bidirectional stream.
+  ///
+  /// Note: the peer does not see the stream until the first write on the returned
+  /// [`SendStream`]. Write data before you wait for data from the peer.
   Future<(SendStream, RecvStream)> openBi() =>
       RustLib.instance.api.crateApiConnectionConnectionOpenBi(that: this);
 
-  /// Opens a new unidirectional (send-only) stream.
+  /// Opens a new unidirectional stream. This stream can only send.
   Future<SendStream> openUni() =>
       RustLib.instance.api.crateApiConnectionConnectionOpenUni(that: this);
 
-  /// Streams path lifecycle events (`Opened`/`Closed`/`Selected`/`Lagged`) for this connection;
-  /// the relay-vs-direct transition is observable via `Selected`. `token` lets the Dart
-  /// subscription cancel the underlying task via `cancel_stream`.
+  /// Sends the path lifecycle events of this connection to `sink`. The events are `Opened`,
+  /// `Closed`, `Selected`, and `Lagged`. A `Selected` event shows a change between the relay path
+  /// and a direct path. The stream ends when the connection closes.
+  ///
+  /// `token` identifies the stream. The Dart subscription calls `cancel_stream` with this token
+  /// to stop the task.
   Stream<PathEventInfo> pathEvents({required BigInt token}) =>
       RustLib.instance.api.crateApiConnectionConnectionPathEvents(that: this, token: token);
 
@@ -3747,10 +3752,11 @@ class ConnectionImpl extends RustOpaque implements Connection {
   Future<List<Uint8List>> readManyDatagrams({required BigInt maxCount}) => RustLib.instance.api
       .crateApiConnectionConnectionReadManyDatagrams(that: this, maxCount: maxCount);
 
-  /// The remote peer's [`EndpointId`](iroh::EndpointId) as 32 raw bytes.
+  /// Returns the [`EndpointId`](iroh::EndpointId) of the remote peer as 32 raw bytes.
   Uint8List remoteId() => RustLib.instance.api.crateApiConnectionConnectionRemoteId(that: this);
 
-  /// Sends an unreliable, unordered datagram. Errors if too large or unsupported.
+  /// Sends an unreliable, unordered datagram. Returns an error if the datagram is too large or
+  /// if the peer does not support datagrams.
   void sendDatagram({required List<int> data}) =>
       RustLib.instance.api.crateApiConnectionConnectionSendDatagram(that: this, data: data);
 
@@ -3759,10 +3765,11 @@ class ConnectionImpl extends RustOpaque implements Connection {
   BigInt sendManyDatagrams({required List<Uint8List> datagrams}) => RustLib.instance.api
       .crateApiConnectionConnectionSendManyDatagrams(that: this, datagrams: datagrams);
 
-  /// A process-stable identifier for this connection.
+  /// Returns a stable identifier for this connection. The value does not change during the
+  /// life of the connection, also if the peer addresses change.
   BigInt stableId() => RustLib.instance.api.crateApiConnectionConnectionStableId(that: this);
 
-  /// Connection counters snapshot.
+  /// Returns a snapshot of the connection counters.
   ConnStats stats() => RustLib.instance.api.crateApiConnectionConnectionStats(that: this);
 }
 
@@ -3783,49 +3790,63 @@ class EndpointImpl extends RustOpaque implements Endpoint {
         RustLib.instance.api.rust_arc_decrement_strong_count_EndpointPtr,
   );
 
-  /// Accepts the next inbound connection, collapsing the lazy `Accept -> Incoming -> Accepting ->
-  /// Connection` chain. Resolves to `None` once the endpoint is closed.
+  /// Accepts the next inbound connection and returns it after the handshake.
+  ///
+  /// This function does all the steps of the iroh chain
+  /// `Accept -> Incoming -> Accepting -> Connection`. Returns `None` after the endpoint closes.
+  /// Returns an error if the handshake fails.
   Future<Connection?> accept() => RustLib.instance.api.crateApiEndpointEndpointAccept(that: this);
 
-  /// Accepts the next inbound connection as an unaccepted [`Incoming`], letting the caller
-  /// inspect the remote address and choose `accept`/`refuse`/`retry`/`ignore`. Resolves to
-  /// `None` once the endpoint is closed.
+  /// Waits for the next inbound connection and returns it as an [`Incoming`] that is not
+  /// accepted yet. The caller can examine the remote address and then call `accept`, `refuse`,
+  /// `retry`, or `ignore`. Returns `None` after the endpoint closes.
   Future<Incoming?> acceptIncoming() =>
       RustLib.instance.api.crateApiEndpointEndpointAcceptIncoming(that: this);
 
-  /// A snapshot of this endpoint's current address (id + known relay URLs + direct IP addrs).
+  /// Returns a snapshot of the current endpoint address of this endpoint. The address contains
+  /// the endpoint ID, the known relay URLs, and the direct IP addresses.
   EndpointAddrParts addr() => RustLib.instance.api.crateApiEndpointEndpointAddr(that: this);
 
-  /// The local socket addresses this endpoint is bound to (`host:port`).
+  /// Returns the local socket addresses of this endpoint in `host:port` form.
   List<String> boundSockets() =>
       RustLib.instance.api.crateApiEndpointEndpointBoundSockets(that: this);
 
-  /// Closes the endpoint gracefully, tearing down connections and background tasks.
+  /// Closes the endpoint cleanly. This stops its connections and its background tasks.
   Future<void> close() => RustLib.instance.api.crateApiEndpointEndpointClose(that: this);
 
-  /// Connects to a remote endpoint over the given ALPN protocol, returning an established
-  /// [`Connection`]. Mirrors `iroh::Endpoint::connect`.
+  /// Connects to a remote endpoint with the given ALPN protocol and returns an established
+  /// [`Connection`]. This function is the same as `iroh::Endpoint::connect`.
+  /// Returns an error if `addr` is not valid or if the connection fails.
   Future<Connection> connect({required EndpointAddrParts addr, required List<int> alpn}) =>
       RustLib.instance.api.crateApiEndpointEndpointConnect(that: this, addr: addr, alpn: alpn);
 
-  /// Streams the home-relay connection status (one entry per configured relay) as it changes.
+  /// Sends the connection status of the home relay servers to `sink` each time it changes.
+  ///
+  /// Each update has one entry for each home relay server with a known URL. The list is empty if
+  /// no relay servers are configured, or before the endpoint selects a home relay server.
+  /// `token` identifies the stream for `cancel_stream`.
   Stream<List<RelayStatusInfo>> homeRelayStatus({required BigInt token}) =>
       RustLib.instance.api.crateApiEndpointEndpointHomeRelayStatus(that: this, token: token);
 
-  /// The endpoint's [`EndpointId`](iroh::EndpointId) (public key) as 32 raw bytes.
+  /// Returns the [`EndpointId`](iroh::EndpointId) of this endpoint as 32 raw bytes. The endpoint
+  /// ID is the public key of the endpoint.
   Uint8List id() => RustLib.instance.api.crateApiEndpointEndpointId(that: this);
 
-  /// Whether the endpoint has been closed.
+  /// Returns `true` if the endpoint is closed.
   bool isClosed() => RustLib.instance.api.crateApiEndpointEndpointIsClosed(that: this);
 
-  /// Replaces the set of accepted ALPN protocols (affects new inbound connections only).
-  /// The order sets the preference: if a peer offers more than one ALPN, the first match wins.
+  /// Replaces the list of accepted ALPN protocols. The change applies only to new inbound
+  /// connections. The order sets the preference: if a peer offers more than one ALPN, the first
+  /// match in this list wins. If the endpoint is closed, iroh ignores the request.
   void setAlpns({required List<Uint8List> alpns}) =>
       RustLib.instance.api.crateApiEndpointEndpointSetAlpns(that: this, alpns: alpns);
 
-  /// Streams snapshots of this endpoint's [`EndpointAddr`](iroh::EndpointAddr) as relay/direct
-  /// discovery updates it. `token` lets the Dart subscription cancel the underlying task via
-  /// `cancel_stream`, which drops the iroh watcher - no leak.
+  /// Sends a snapshot of the [`EndpointAddr`](iroh::EndpointAddr) of this endpoint to `sink`
+  /// each time the address changes. The address changes when the endpoint finds relay servers or
+  /// direct addresses.
+  ///
+  /// `token` identifies the stream. The Dart subscription calls `cancel_stream` with this token.
+  /// This call stops the task and drops the iroh watcher, so no resource leak occurs.
   Stream<EndpointAddrParts> watchAddr({required BigInt token}) =>
       RustLib.instance.api.crateApiEndpointEndpointWatchAddr(that: this, token: token);
 }
@@ -3847,20 +3868,25 @@ class IncomingImpl extends RustOpaque implements Incoming {
         RustLib.instance.api.rust_arc_decrement_strong_count_IncomingPtr,
   );
 
-  /// Accepts the connection, completing the handshake and returning a [`Connection`].
+  /// Accepts the connection, completes the handshake, and returns a [`Connection`].
+  /// Returns an error if a decision already occurred or if the handshake fails.
   Future<Connection> accept() => RustLib.instance.api.crateApiConnectionIncomingAccept(that: this);
 
-  /// Ignores the connection (sends no packet, frees resources).
+  /// Ignores the connection. The endpoint sends no packet and releases the resources of the
+  /// connection. Returns an error if a decision already occurred.
   void ignore() => RustLib.instance.api.crateApiConnectionIncomingIgnore(that: this);
 
-  /// Refuses the connection (sends no packet); the peer's connect attempt fails.
+  /// Refuses the connection. The endpoint sends a close packet with the `CONNECTION_REFUSED`
+  /// error, and the connect attempt of the peer fails. Returns an error if a decision already
+  /// occurred.
   void refuse() => RustLib.instance.api.crateApiConnectionIncomingRefuse(that: this);
 
-  /// A debug rendering of the remote address that initiated this connection.
+  /// Returns a debug form of the remote address that started this connection.
   String remoteAddr() => RustLib.instance.api.crateApiConnectionIncomingRemoteAddr(that: this);
 
-  /// Responds with a retry packet (return-routability / anti-amplification). The peer transparently
-  /// reconnects, producing a fresh [`Incoming`].
+  /// Sends a retry packet to the peer for address validation. The peer then connects again
+  /// automatically, and the endpoint receives a new [`Incoming`]. Returns an error if a retry is
+  /// not possible for this connection or if a decision already occurred.
   void retry() => RustLib.instance.api.crateApiConnectionIncomingRetry(that: this);
 }
 
@@ -3881,22 +3907,24 @@ class RecvStreamImpl extends RustOpaque implements RecvStream {
         RustLib.instance.api.rust_arc_decrement_strong_count_RecvStreamPtr,
   );
 
-  /// The QUIC stream id.
+  /// Returns the QUIC stream ID.
   BigInt id() => RustLib.instance.api.crateApiConnectionRecvStreamId(that: this);
 
-  /// Reads up to `max_len` bytes. Returns the bytes read, or `None` at end-of-stream.
+  /// Reads at most `max_len` bytes. Returns the bytes that it read, or `None` at the end of the
+  /// stream.
   Future<Uint8List?> read({required BigInt maxLen}) =>
       RustLib.instance.api.crateApiConnectionRecvStreamRead(that: this, maxLen: maxLen);
 
-  /// Reads exactly `len` bytes, erroring if the stream ends early.
+  /// Reads exactly `len` bytes. Returns an error if the stream ends before `len` bytes arrive.
   Future<Uint8List> readExact({required BigInt len}) =>
       RustLib.instance.api.crateApiConnectionRecvStreamReadExact(that: this, len: len);
 
-  /// Reads to end of stream, up to `size_limit` bytes.
+  /// Reads all data until the end of the stream. Returns an error if the data is longer than
+  /// `size_limit` bytes.
   Future<Uint8List> readToEnd({required BigInt sizeLimit}) =>
       RustLib.instance.api.crateApiConnectionRecvStreamReadToEnd(that: this, sizeLimit: sizeLimit);
 
-  /// Asks the peer to stop sending on this stream with the given error code.
+  /// Tells the peer to stop the transmission on this stream, with the given error code.
   Future<void> stop({required int errorCode}) =>
       RustLib.instance.api.crateApiConnectionRecvStreamStop(that: this, errorCode: errorCode);
 }
@@ -3918,9 +3946,11 @@ class RouterBuilderImpl extends RustOpaque implements RouterBuilder {
         RustLib.instance.api.rust_arc_decrement_strong_count_RouterBuilderPtr,
   );
 
-  /// Registers `on_accept` as the handler for connections negotiating `alpn`. The Dart callback
-  /// receives each accepted [`Connection`] and resolves when it has finished handling it (after
-  /// which the connection is dropped unless other clones are held).
+  /// Registers `on_accept` as the handler for the connections that negotiate `alpn`.
+  ///
+  /// The Dart callback receives each accepted [`Connection`]. Its future completes when the
+  /// callback has finished with the connection. After that, the router does not keep the
+  /// connection. Returns an error if [`RouterBuilder::spawn`] already started the router.
   Future<void> accept({
     required List<int> alpn,
     required FutureOr<void> Function(Connection) onAccept,
@@ -3930,7 +3960,8 @@ class RouterBuilderImpl extends RustOpaque implements RouterBuilder {
     onAccept: onAccept,
   );
 
-  /// Spawns the router's accept loop and returns the running [`Router`].
+  /// Starts the accept loop of the router and returns the [`Router`]. Returns an error if
+  /// the router already started.
   Future<Router> spawn() => RustLib.instance.api.crateApiRouterRouterBuilderSpawn(that: this);
 }
 
@@ -3950,7 +3981,7 @@ class RouterImpl extends RustOpaque implements Router {
     rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_RouterPtr,
   );
 
-  /// Shuts the router down gracefully, stopping its accept loop.
+  /// Stops the router and its accept loop cleanly. Returns an error if the shutdown fails.
   Future<void> shutdown() => RustLib.instance.api.crateApiRouterRouterShutdown(that: this);
 }
 
@@ -3971,17 +4002,19 @@ class SendStreamImpl extends RustOpaque implements SendStream {
         RustLib.instance.api.rust_arc_decrement_strong_count_SendStreamPtr,
   );
 
-  /// Finishes the stream cleanly (signals end-of-data to the peer).
+  /// Finishes the stream cleanly. The peer receives an end-of-data signal.
   Future<void> finish() => RustLib.instance.api.crateApiConnectionSendStreamFinish(that: this);
 
-  /// The QUIC stream id.
+  /// Returns the QUIC stream ID.
   BigInt id() => RustLib.instance.api.crateApiConnectionSendStreamId(that: this);
 
-  /// Resets the stream, abandoning unacknowledged data with the given error code.
+  /// Resets the stream with the given error code. The stream stops the transmission of data
+  /// that the peer did not acknowledge.
   Future<void> reset({required int errorCode}) =>
       RustLib.instance.api.crateApiConnectionSendStreamReset(that: this, errorCode: errorCode);
 
-  /// Writes all of `data` to the stream, applying backpressure as needed.
+  /// Writes all of `data` to the stream. If flow control limits the stream, the function waits
+  /// until it can send.
   Future<void> writeAll({required List<int> data}) =>
       RustLib.instance.api.crateApiConnectionSendStreamWriteAll(that: this, data: data);
 }

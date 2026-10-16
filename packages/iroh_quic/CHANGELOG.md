@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 - **iroh 1.3.0:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.3.0
   (was 1.0.0). This brings iroh's bug fixes (relay reconnect, router protocol ordering, Windows
@@ -29,11 +29,11 @@
 
 ## 1.0.1 - Dart-only (Flutter dropped)
 
-The package is now **pure Dart** — no `flutter` SDK dependency, runnable under
+The package is now **pure Dart**: no `flutter` SDK dependency, runnable under
 `dart run` / `dart test`. The Dart/Rust API is unchanged; only the packaging moves off Flutter, so
 existing code keeps working.
 
-- **Prebuilt native libraries — no Rust toolchain required.** Run `dart run iroh_quic:setup` to
+- **Prebuilt native libraries: no Rust toolchain required.** Run `dart run iroh_quic:setup` to
   download a signed (Ed25519) prebuilt cdylib for your desktop platform (Linux/macOS/Windows on
   x64/arm64) into a per-user cache; `Iroh.init()` finds it automatically. Prefer source? `cargo
   build --release` still works and the loader picks that up too.

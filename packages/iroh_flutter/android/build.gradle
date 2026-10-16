@@ -1,6 +1,6 @@
-// Android build for the iroh_flutter plugin. cargokit cross-compiles the owned
-// `irohdart-ffi` crate (at the repo root) via cargo-ndk and stages per-ABI .so into jniLibs.
-// NDK r28+ is required for the 16KB page-alignment Google Play requirement.
+// Android build for the plugin. cargokit uses the Android NDK to compile the crate `irohdart_ffi`
+// (in ../rust) for each Android ABI. It puts the .so file for each Android ABI into jniLibs.
+// Google Play requires 16 KB page alignment. This alignment is available in NDK r28 and later.
 import groovy.json.JsonSlurper
 
 group = "io.snowpine.iroh_flutter"
@@ -16,10 +16,10 @@ buildscript {
     }
 }
 
-// The consuming app project resolves this plugin's transitive dependencies with ITS OWN
-// repository list, so the rustls-platform-verifier repo must be injected into every project
-// (same reason google()/mavenCentral() are), not declared in this module's `repositories`
-// block. Resolve the path once - the closure below runs per project.
+// The app project resolves the transitive dependencies of this plugin with ITS OWN repository
+// list. Thus, this file adds the rustls-platform-verifier repository to all projects, the same as
+// google() and mavenCentral(). A `repositories` block in this module is not sufficient.
+// The closure below runs for each project, so this line finds the path one time only.
 def rustlsPlatformVerifierRepo = findRustlsPlatformVerifierProject()
 
 rootProject.allprojects {
@@ -38,18 +38,18 @@ apply plugin: "com.android.library"
 android {
     namespace = "io.snowpine.iroh_flutter"
     compileSdk = 34
-    ndkVersion = "29.0.14206865" // r28+ required for 16KB-aligned pages (Google Play requirement).
+    ndkVersion = "29.0.14206865" // Google Play requires 16 KB page alignment (NDK r28 or later).
 
     defaultConfig {
         minSdk = 24
-        // rustls-platform-verifier's Kotlin classes are only reachable through JNI name lookups,
-        // so R8 must be told to keep them in the consuming app's release builds.
+        // Native code finds the Kotlin classes of rustls-platform-verifier by name through JNI
+        // only. Thus, R8 must keep these classes in release builds of the app.
         consumerProguardFiles "consumer-rules.pro"
     }
 }
 
-// Hook the Rust build into the Android build. Relative to this file's dir (android/),
-// `../rust` resolves to the repo-root owned wrapper crate.
+// Add the Rust build to the Android build. The path `../rust` is relative to android/.
+// It points to the copy of the crate in the plugin.
 apply from: "../cargokit/gradle/plugin.gradle"
 
 cargokit {
@@ -57,10 +57,12 @@ cargokit {
     libname = "irohdart_ffi"
 }
 
-// iroh verifies TLS certificates (pkarr HTTPS publishing, relay probes) through the
-// rustls-platform-verifier crate, whose runtime needs a small Kotlin component in the app. The
-// version-matched AAR ships inside the crate itself; expose it as a local Maven repository, as
-// documented by upstream (https://github.com/rustls/rustls-platform-verifier#android).
+// iroh checks TLS certificates through rustls-platform-verifier, for example for pkarr HTTPS
+// publication and relay probes. At run time, rustls-platform-verifier needs a small Kotlin
+// component in the app. The rustls-platform-verifier-android package contains the AAR for the
+// same version. This function gives the path of that AAR as a local Maven repository.
+// The upstream documentation shows this procedure
+// (https://github.com/rustls/rustls-platform-verifier#android).
 String findRustlsPlatformVerifierProject() {
     def cargoManifest = file("../rust/Cargo.toml").absolutePath
     def metadataText

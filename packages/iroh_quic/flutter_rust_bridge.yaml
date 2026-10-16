@@ -1,12 +1,14 @@
-# flutter_rust_bridge v2 codegen config (run via tool/frb_codegen.sh).
-# Scans the owned wrapper crate's `crate::api` and emits Dart bindings into the package.
+# Configuration for the flutter_rust_bridge (FRB) v2 code generator. `tool/frb_codegen.sh` runs it.
+# The generator reads the `crate::api` module of the crate and writes the Dart bindings into the
+# package.
 rust_input: crate::api
 rust_root: rust
 dart_output: lib/src/rust
 dart_root: .
 dart_entrypoint_class_name: RustLib
-# Keep the generated Rust glue beside the hand-written api modules.
+# The generated Rust glue code goes next to the hand-written API modules.
 rust_output: rust/src/frb_generated.rs
-# Match the project formatter width (analysis_options.yaml formatter.page_width) so the generated
-# Dart bindings stay `dart format`-clean and regeneration is reproducible.
+# This value is equal to the formatter width of the project: `formatter.page_width` in
+# `analysis_options.yaml`. Thus the Dart bindings agree with `dart format`, and each generation
+# gives the same output.
 dart_format_line_length: 100

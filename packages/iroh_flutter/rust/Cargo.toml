@@ -1,66 +1,74 @@
 [package]
-# Lives at the package root in rust/ so the published package is self-contained. Underscore (not
-# kebab) so the package name matches the produced lib artifact
-# (`libirohdart_ffi.a`/`.dylib`/`.so`/`.dll`), which the loader + installer look up by name.
+# This crate is in the `rust/` directory of the Dart package, so the published package is complete.
+# The name uses underscores, not hyphens, so that it agrees with the native library file names:
+# `libirohdart_ffi.a`, `.dylib`, `.so`, and `.dll`. The loader and the installer find the native
+# library by this name.
 name = "irohdart_ffi"
-version = "1.0.3"
+version = "1.1.0"
 edition = "2021"
 publish = false
 rust-version = "1.91"
-description = "Owned flutter_rust_bridge wrapper crate exposing the iroh 1.0 P2P core to Dart (iroh_quic)."
+description = "Owned flutter_rust_bridge wrapper crate exposing the iroh 1.x P2P core to Dart (iroh_quic)."
 license = "Apache-2.0"
 
 [lib]
-# staticlib -> Apple umbrella / process()-linking; cdylib -> Android/desktop DynamicLibrary.open.
+# Apple platforms link the `staticlib` into the app and find its symbols in the process.
+# Android and desktop platforms load the `cdylib` with `DynamicLibrary.open`.
 crate-type = ["staticlib", "cdylib", "lib"]
 
 [lints.rust]
-# `frb_expand` is injected by the flutter_rust_bridge::frb attribute macro during codegen.
+# The `flutter_rust_bridge::frb` attribute macro adds the `frb_expand` cfg during code generation.
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
 
 [dependencies]
-# Pin the FRB runtime EXACTLY to the codegen version (2.13.0) - they must match.
+# The flutter_rust_bridge (FRB) runtime version must be equal to the FRB codegen version (2.13.0).
+# Thus this line pins the exact version.
 flutter_rust_bridge = "=2.13.0"
-# Own the `iroh` crate directly. default-features = false drops `fast-apple-datapath`
-# (private Apple API -> App Store risk) and `metrics`; `tls-ring` installs the rustls
-# CryptoProvider so we never expose it to Dart.
+# This crate depends on the `iroh` crate directly. `default-features = false` removes
+# `fast-apple-datapath`, which uses a private Apple API and is a risk for App Store review.
+# It also removes `metrics` and `portmapper`. The `tls-ring` feature supplies the rustls crypto
+# provider, so the Dart API does not show it.
 iroh = { version = "1.3", default-features = false, features = ["tls-ring"] }
 iroh-base = "1.3"
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread"] }
-# Stream bridging for Watcher / path_events / accept loop.
+# `futures::StreamExt` reads the watcher streams and the path event stream.
 futures = "0.3"
-# Custom AddressLookup returns an n0_future BoxStream of resolved Items; async-stream
-# builds that 0-or-1-item stream ergonomically.
+# The custom `AddressLookup` returns an `n0_future` `BoxStream` of resolved items.
+# `async-stream` makes this stream, which has zero or one item.
 n0-future = "0.3"
 async-stream = "0.3"
-# Error plumbing (FRB surfaces anyhow::Error as a Dart exception) + canonical addr serialisation.
+# FRB gives an `anyhow::Error` to Dart as an exception.
+# `postcard` encodes an endpoint address in the canonical iroh wire format.
 anyhow = "1"
 postcard = { version = "1", features = ["use-std"] }
-# Datagram payloads cross as bytes::Bytes (Connection::send_datagram/read_datagram).
+# The datagram functions of the iroh `Connection` use `bytes::Bytes` for payloads.
 bytes = "1"
 
-# Android bootstrap (src/android.rs): iroh reads system DNS / network state / TLS trust through
-# JNI, which needs the app's JavaVM + Context installed before the first Endpoint. jni is the
-# same 0.22 line rustls-platform-verifier uses; iroh-dns provides the documented
-# install_android_jni_context entry point (the ndk-context instance shared with netdev/hickory).
+# Android bootstrap (`src/android.rs`). iroh reads the system DNS servers, the network state, and
+# the TLS trust store through JNI. JNI needs the `JavaVM` and the `Context` of the app before the
+# first endpoint exists. `jni` uses the same 0.22 line as `rustls-platform-verifier`.
+# `iroh-dns` supplies the documented entry point `install_android_jni_context`. This function
+# fills the `ndk-context` instance that `netdev` and `hickory` also use.
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22"
 iroh-dns = "1.3"
 rustls-platform-verifier = "0.7"
 
-# Dev/debug builds (used by `cargo test` and local `cargo build`) carry no debuginfo -
-# the full iroh QUIC stack's debug symbols are multi-GB and aren't needed to pass tests or run the
-# example. Keeps the simulator/emulator build disk-friendly.
+# Dev builds contain no debug information. `cargo test` and a local `cargo build` use these builds.
+# The debug symbols of the full iroh QUIC stack use some gigabytes of disk space.
+# The tests and the example do not need them, and the simulator and emulator builds stay small.
 [profile.dev]
 debug = false
 strip = "debuginfo"
 
 [profile.release]
-# Size-opt profile. NOTE: panic="abort" means a Rust panic aborts the process
-# instead of being caught by FRB's catch_unwind -> surfaced as a Dart exception. We accept this
-# for shipped release builds (size); `cargo test`/dev builds use the default `unwind` so the
-# conformance tests still observe panics as catchable failures. Revisit if a panic-y
-# code path (malformed peer input) needs graceful surfacing in production.
+# This profile makes the native library small.
+# Note: with `panic = "abort"`, a Rust panic stops the process.
+# FRB cannot catch the panic with `catch_unwind` and give it to Dart as an exception.
+# Release builds accept this cost because the native library becomes smaller.
+# Test and dev builds use the default `unwind`. Thus the conformance tests can catch panics as
+# failures. If malformed peer input can cause a panic and production needs a clean error, change
+# this value.
 opt-level = "z"
 lto = "fat"
 codegen-units = 1

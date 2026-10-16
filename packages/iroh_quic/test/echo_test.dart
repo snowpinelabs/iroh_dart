@@ -7,9 +7,10 @@ import 'dart:typed_data';
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// Byte-identical bidi echo across two in-process endpoints over `connect` / `acceptBi`, plus
-/// unidirectional streams and datagrams. Relays are disabled; the client reaches the server via
-/// its loopback direct addresses, so the test needs no network.
+/// Byte-identical bidirectional echo between two endpoints in one process, with `connect` and
+/// `acceptBi`. The tests also cover unidirectional streams and datagrams. Relay servers are
+/// disabled. The client connects to the server through its loopback direct addresses, so the
+/// tests do not need a network.
 void main() {
   setUpAll(() async {
     await Iroh.init();
@@ -17,8 +18,8 @@ void main() {
 
   const alpn = 'iroh-dart/echo/0';
 
-  /// Rewrites an endpoint's bound socket addresses to loopback so a same-machine peer can dial it
-  /// directly (no relay, no discovery).
+  /// Changes the bound socket addresses of an endpoint to loopback addresses. A peer on the same
+  /// machine can then connect to the endpoint directly, without a relay server or address lookup.
   List<String> loopback(List<String> bound) {
     final out = <String>[];
     for (final b in bound) {
@@ -45,7 +46,7 @@ void main() {
 
     final payload = Uint8List.fromList(List<int>.generate(64 * 1024, (i) => (i * 31 + 7) & 0xff));
 
-    // Server: accept a connection, echo the first bidi stream back.
+    // Server: accept a connection and echo the first bidirectional stream.
     final served = () async {
       final conn = await server.accept();
       expect(conn, isNotNull);
@@ -56,7 +57,7 @@ void main() {
       return conn.remoteId;
     }();
 
-    // Client: open a bidi stream, send the payload, read the echo.
+    // Client: open a bidirectional stream, send the payload, and read the echo.
     final conn = await client.connect(serverAddr, alpn.codeUnits);
     final (send, recv) = await conn.openBi();
     await send.writeAll(payload);
@@ -107,7 +108,6 @@ void main() {
     conn.sendDatagram(datagram);
 
     expect(await served, datagram);
-    // Stats are accessible.
     expect(conn.stats.udpTxDatagrams, greaterThanOrEqualTo(0));
   });
 
@@ -120,7 +120,7 @@ void main() {
 
     final served = () async {
       final conn = await server.accept();
-      // The empty batch resolves at once, and a negative count is a caller error.
+      // A batch with maxCount 0 completes immediately. A negative count is a caller error.
       expect(await conn!.readManyDatagrams(maxCount: 0), isEmpty);
       expect(() => conn.readManyDatagrams(maxCount: -1), throwsRangeError);
       final received = <Uint8List>[];
@@ -154,7 +154,8 @@ void main() {
 
     final conn = await client.connect(serverAddr, alpn.codeUnits);
     final (send, recv) = await conn.openBi();
-    // Open the bidi stream so the server's acceptBi resolves (lazy-stream footgun).
+    // Send one byte to open the stream. The peer sees a QUIC stream only after data arrives on it.
+    // Without this byte, acceptBi on the server does not complete.
     await send.writeAll(Uint8List.fromList(const <int>[0]));
     await send.finish();
 

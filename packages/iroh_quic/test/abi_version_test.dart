@@ -4,9 +4,9 @@ library;
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// Host check: load the native library, verify the ABI handshake, and call the no-op FFI
-/// function end-to-end (Rust -> FRB glue -> native lib -> Dart). The on-device half (iOS +
-/// Android) is verified separately in `example/`.
+/// Loads the native library on the host and checks the ABI version. The tests also read the iroh
+/// version and the capabilities through the Dart bindings. The integration tests of the example
+/// app do the same checks on iOS and Android devices.
 void main() {
   setUpAll(() async {
     await Iroh.init();
@@ -25,6 +25,6 @@ void main() {
     final caps = Iroh.capabilities;
     expect(caps.direct, isTrue, reason: 'native track supports direct connections');
     expect(caps.relay, isTrue);
-    expect(caps.blobs, isFalse, reason: 'blobs are out of scope in v1');
+    expect(caps.blobs, isFalse, reason: 'this package does not wrap iroh-blobs');
   });
 }

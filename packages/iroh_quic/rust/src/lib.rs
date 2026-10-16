@@ -1,7 +1,7 @@
-//! `irohdart-ffi` - owned flutter_rust_bridge wrapper around the iroh 1.0 P2P core.
+//! `irohdart_ffi`: the flutter_rust_bridge (FRB) wrapper crate for the iroh P2P QUIC library.
 //!
-//! This crate is the single Rust dependency of the `iroh_quic` Flutter plugin. It depends on the
-//! `iroh` crate directly and exposes a Dart-shaped surface through FRB.
+//! This crate is the only Rust dependency of the `iroh_quic` Dart package. It depends on the
+//! `iroh` crate directly and gives a Dart API through FRB.
 
 #[cfg(target_os = "android")]
 mod android;

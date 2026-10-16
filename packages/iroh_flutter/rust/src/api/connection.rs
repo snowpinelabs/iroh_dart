@@ -1,10 +1,11 @@
-//! Connections & QUIC streams - the 80% use case.
+//! Connections and QUIC streams.
 //!
-//! `Connection`, `SendStream`, and `RecvStream` are opaque handles. Stream halves are wrapped in
-//! `Arc<tokio::sync::Mutex<..>>` so every op can be cloned into the shared tokio runtime
-//! (`rt().spawn`) - this gives iroh's I/O reactor and serialises concurrent access to a half. iroh
-//! futures borrow `&self` with a lifetime, so we clone the (Arc-backed) `Connection`/stream into
-//! each spawned task to satisfy `'static`.
+//! `Connection`, `SendStream`, and `RecvStream` are opaque handles. Each stream half is in an
+//! `Arc<tokio::sync::Mutex<..>>`, so each operation can move a clone of it into a task on the
+//! shared tokio runtime (`rt().spawn`). The runtime supplies the iroh I/O reactor. The mutex
+//! serializes concurrent access to a stream half. iroh futures borrow `&self` with a lifetime, but
+//! a spawned task must be `'static`. Thus each operation moves a clone of the `Arc`-backed
+//! `Connection` or stream half into its task.
 
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
@@ -42,10 +43,11 @@ pub struct RecvStream {
     id: u64,
 }
 
-/// An inbound connection that has not yet been accepted. Lets Dart inspect the remote address and
-/// choose to `accept`/`refuse`/`retry`/`ignore` - the Dart-driven filter, no Rust->Dart async
-/// callback required. The contained `Incoming` is consumed on the first decision; later calls
-/// error.
+/// An inbound connection that the endpoint has not accepted yet.
+///
+/// Dart can examine the remote address and then call `accept`, `refuse`, `retry`, or `ignore`.
+/// Thus Dart can filter connections without a callback from Rust to Dart. The first decision
+/// consumes the contained iroh `Incoming`. Later calls return an error.
 #[frb(opaque)]
 pub struct Incoming {
     inner: StdMutex<Option<IrohIncoming>>,
@@ -69,13 +71,14 @@ impl Incoming {
             .ok_or_else(|| anyhow!("incoming connection already consumed"))
     }
 
-    /// A debug rendering of the remote address that initiated this connection.
+    /// Returns a debug form of the remote address that started this connection.
     #[frb(sync)]
     pub fn remote_addr(&self) -> String {
         self.remote_addr.clone()
     }
 
-    /// Accepts the connection, completing the handshake and returning a [`Connection`].
+    /// Accepts the connection, completes the handshake, and returns a [`Connection`].
+    /// Returns an error if a decision already occurred or if the handshake fails.
     pub async fn accept(&self) -> Result<Connection> {
         let inc = self.take()?;
         let conn = rt()
@@ -89,7 +92,9 @@ impl Incoming {
         Ok(Connection::wrap(conn))
     }
 
-    /// Refuses the connection (sends no packet); the peer's connect attempt fails.
+    /// Refuses the connection. The endpoint sends a close packet with the `CONNECTION_REFUSED`
+    /// error, and the connect attempt of the peer fails. Returns an error if a decision already
+    /// occurred.
     #[frb(sync)]
     pub fn refuse(&self) -> Result<()> {
         let inc = self.take()?;
@@ -98,8 +103,9 @@ impl Incoming {
         Ok(())
     }
 
-    /// Responds with a retry packet (return-routability / anti-amplification). The peer transparently
-    /// reconnects, producing a fresh [`Incoming`].
+    /// Sends a retry packet to the peer for address validation. The peer then connects again
+    /// automatically, and the endpoint receives a new [`Incoming`]. Returns an error if a retry is
+    /// not possible for this connection or if a decision already occurred.
     #[frb(sync)]
     pub fn retry(&self) -> Result<()> {
         let inc = self.take()?;
@@ -107,7 +113,8 @@ impl Incoming {
         inc.retry().map_err(anyhow::Error::new)
     }
 
-    /// Ignores the connection (sends no packet, frees resources).
+    /// Ignores the connection. The endpoint sends no packet and releases the resources of the
+    /// connection. Returns an error if a decision already occurred.
     #[frb(sync)]
     pub fn ignore(&self) -> Result<()> {
         let inc = self.take()?;
@@ -117,7 +124,7 @@ impl Incoming {
     }
 }
 
-/// A snapshot of a few useful connection counters.
+/// A snapshot of some UDP counters of a connection.
 pub struct ConnStats {
     pub udp_tx_datagrams: u64,
     pub udp_tx_bytes: u64,
@@ -150,25 +157,26 @@ impl Connection {
         Connection { inner }
     }
 
-    /// The remote peer's [`EndpointId`](iroh::EndpointId) as 32 raw bytes.
+    /// Returns the [`EndpointId`](iroh::EndpointId) of the remote peer as 32 raw bytes.
     #[frb(sync)]
     pub fn remote_id(&self) -> Vec<u8> {
         self.inner.remote_id().as_bytes().to_vec()
     }
 
-    /// The negotiated ALPN protocol for this connection.
+    /// Returns the ALPN protocol that the two endpoints negotiated for this connection.
     #[frb(sync)]
     pub fn alpn(&self) -> Vec<u8> {
         self.inner.alpn().to_vec()
     }
 
-    /// A process-stable identifier for this connection.
+    /// Returns a stable identifier for this connection. The value does not change during the
+    /// life of the connection, also if the peer addresses change.
     #[frb(sync)]
     pub fn stable_id(&self) -> usize {
         self.inner.stable_id()
     }
 
-    /// Connection counters snapshot.
+    /// Returns a snapshot of the connection counters.
     #[frb(sync)]
     pub fn stats(&self) -> ConnStats {
         let s = self.inner.stats();
@@ -180,8 +188,10 @@ impl Connection {
         }
     }
 
-    /// Opens a new bidirectional stream. Note the lazy-stream footgun: the peer does not observe
-    /// the stream until the first write on the returned [`SendStream`].
+    /// Opens a new bidirectional stream.
+    ///
+    /// Note: the peer does not see the stream until the first write on the returned
+    /// [`SendStream`]. Write data before you wait for data from the peer.
     pub async fn open_bi(&self) -> Result<(SendStream, RecvStream)> {
         let conn = self.inner.clone();
         let (s, r) = rt()
@@ -191,7 +201,7 @@ impl Connection {
         Ok((SendStream::wrap(s), RecvStream::wrap(r)))
     }
 
-    /// Opens a new unidirectional (send-only) stream.
+    /// Opens a new unidirectional stream. This stream can only send.
     pub async fn open_uni(&self) -> Result<SendStream> {
         let conn = self.inner.clone();
         let s = rt()
@@ -201,7 +211,7 @@ impl Connection {
         Ok(SendStream::wrap(s))
     }
 
-    /// Accepts the next incoming bidirectional stream from the peer.
+    /// Accepts the next bidirectional stream that the peer opens.
     pub async fn accept_bi(&self) -> Result<(SendStream, RecvStream)> {
         let conn = self.inner.clone();
         let (s, r) = rt()
@@ -211,7 +221,7 @@ impl Connection {
         Ok((SendStream::wrap(s), RecvStream::wrap(r)))
     }
 
-    /// Accepts the next incoming unidirectional (receive-only) stream from the peer.
+    /// Accepts the next unidirectional stream that the peer opens. This stream can only receive.
     pub async fn accept_uni(&self) -> Result<RecvStream> {
         let conn = self.inner.clone();
         let r = rt()
@@ -221,7 +231,8 @@ impl Connection {
         Ok(RecvStream::wrap(r))
     }
 
-    /// Sends an unreliable, unordered datagram. Errors if too large or unsupported.
+    /// Sends an unreliable, unordered datagram. Returns an error if the datagram is too large or
+    /// if the peer does not support datagrams.
     #[frb(sync)]
     pub fn send_datagram(&self, data: Vec<u8>) -> Result<()> {
         self.inner
@@ -266,7 +277,7 @@ impl Connection {
         .map_err(|e| anyhow!("read_many_datagrams task panicked: {e}"))?
     }
 
-    /// Waits until the connection is closed and returns the human-readable close reason.
+    /// Waits until the connection closes and returns the close reason in human-readable form.
     pub async fn closed(&self) -> String {
         let conn = self.inner.clone();
         match rt().spawn(async move { conn.closed().await }).await {
@@ -275,15 +286,18 @@ impl Connection {
         }
     }
 
-    /// Closes the connection immediately with an application error code and reason.
+    /// Closes the connection immediately with an application error code and a reason.
     #[frb(sync)]
     pub fn close(&self, error_code: u32, reason: Vec<u8>) {
         self.inner.close(VarInt::from_u32(error_code), &reason);
     }
 
-    /// Streams path lifecycle events (`Opened`/`Closed`/`Selected`/`Lagged`) for this connection;
-    /// the relay-vs-direct transition is observable via `Selected`. `token` lets the Dart
-    /// subscription cancel the underlying task via `cancel_stream`.
+    /// Sends the path lifecycle events of this connection to `sink`. The events are `Opened`,
+    /// `Closed`, `Selected`, and `Lagged`. A `Selected` event shows a change between the relay path
+    /// and a direct path. The stream ends when the connection closes.
+    ///
+    /// `token` identifies the stream. The Dart subscription calls `cancel_stream` with this token
+    /// to stop the task.
     pub fn path_events(&self, token: u64, sink: StreamSink<PathEventInfo>) {
         let stream = self.inner.path_events();
         let handle = rt().spawn(async move {
@@ -300,13 +314,14 @@ impl Connection {
 }
 
 impl SendStream {
-    /// The QUIC stream id.
+    /// Returns the QUIC stream ID.
     #[frb(sync)]
     pub fn id(&self) -> u64 {
         self.id
     }
 
-    /// Writes all of `data` to the stream, applying backpressure as needed.
+    /// Writes all of `data` to the stream. If flow control limits the stream, the function waits
+    /// until it can send.
     pub async fn write_all(&self, data: Vec<u8>) -> Result<()> {
         let inner = self.inner.clone();
         rt().spawn(async move {
@@ -322,7 +337,7 @@ impl SendStream {
         Ok(())
     }
 
-    /// Finishes the stream cleanly (signals end-of-data to the peer).
+    /// Finishes the stream cleanly. The peer receives an end-of-data signal.
     pub async fn finish(&self) -> Result<()> {
         let inner = self.inner.clone();
         rt().spawn(async move { inner.lock().await.finish().map_err(anyhow::Error::new) })
@@ -331,7 +346,8 @@ impl SendStream {
         Ok(())
     }
 
-    /// Resets the stream, abandoning unacknowledged data with the given error code.
+    /// Resets the stream with the given error code. The stream stops the transmission of data
+    /// that the peer did not acknowledge.
     pub async fn reset(&self, error_code: u32) -> Result<()> {
         let inner = self.inner.clone();
         rt().spawn(async move {
@@ -348,13 +364,14 @@ impl SendStream {
 }
 
 impl RecvStream {
-    /// The QUIC stream id.
+    /// Returns the QUIC stream ID.
     #[frb(sync)]
     pub fn id(&self) -> u64 {
         self.id
     }
 
-    /// Reads up to `max_len` bytes. Returns the bytes read, or `None` at end-of-stream.
+    /// Reads at most `max_len` bytes. Returns the bytes that it read, or `None` at the end of the
+    /// stream.
     pub async fn read(&self, max_len: usize) -> Result<Option<Vec<u8>>> {
         let inner = self.inner.clone();
         rt().spawn(async move {
@@ -374,7 +391,7 @@ impl RecvStream {
         .map_err(|e| anyhow!("read task panicked: {e}"))?
     }
 
-    /// Reads exactly `len` bytes, erroring if the stream ends early.
+    /// Reads exactly `len` bytes. Returns an error if the stream ends before `len` bytes arrive.
     pub async fn read_exact(&self, len: usize) -> Result<Vec<u8>> {
         let inner = self.inner.clone();
         rt().spawn(async move {
@@ -391,7 +408,8 @@ impl RecvStream {
         .map_err(|e| anyhow!("read_exact task panicked: {e}"))?
     }
 
-    /// Reads to end of stream, up to `size_limit` bytes.
+    /// Reads all data until the end of the stream. Returns an error if the data is longer than
+    /// `size_limit` bytes.
     pub async fn read_to_end(&self, size_limit: usize) -> Result<Vec<u8>> {
         let inner = self.inner.clone();
         rt().spawn(async move {
@@ -406,7 +424,7 @@ impl RecvStream {
         .map_err(|e| anyhow!("read_to_end task panicked: {e}"))?
     }
 
-    /// Asks the peer to stop sending on this stream with the given error code.
+    /// Tells the peer to stop the transmission on this stream, with the given error code.
     pub async fn stop(&self, error_code: u32) -> Result<()> {
         let inner = self.inner.clone();
         rt().spawn(async move {

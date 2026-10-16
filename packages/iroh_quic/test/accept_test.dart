@@ -7,8 +7,9 @@ import 'dart:typed_data';
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// The accept loop with the Dart-driven [Incoming] filter - multiple concurrent inbound
-/// connections, the `accept` path, and the `refuse` path. Relays disabled, loopback addrs.
+/// The accept loop with the [Incoming] filter in Dart. The tests cover concurrent inbound
+/// connections, the `accept` path, and the `refuse` path. Relay servers are disabled, and the
+/// client uses loopback addresses.
 void main() {
   setUpAll(() async {
     await Iroh.init();

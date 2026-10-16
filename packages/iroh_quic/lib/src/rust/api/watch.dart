@@ -8,14 +8,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `map_path_event`
 
-/// Cancels a reactive stream (watchAddr / homeRelayStatus / pathEvents) by its token. Invoked from
-/// the Dart subscription's `onCancel` so a cancelled subscription promptly drops the iroh watcher
-/// (no leak, no hang).
+/// Cancels a reactive stream by its token. The reactive streams are `watchAddr`,
+/// `homeRelayStatus`, and `pathEvents`. The `onCancel` handler of the Dart subscription calls this
+/// function. The stream task then stops and releases its iroh watcher or event stream
+/// immediately. Thus the subscription does not leak resources or hang.
 void cancelStream({required BigInt token}) =>
     RustLib.instance.api.crateApiWatchCancelStream(token: token);
 
-/// A path lifecycle event on a connection, in flat form. `remote_addr` is set for
-/// `Opened`/`Closed`/`Selected`; `missed` is set for `Lagged`.
+/// A path lifecycle event of a connection, in flat form. `remote_addr` has a value for `Opened`,
+/// `Closed`, and `Selected`. `missed` has a value for `Lagged`. It is the number of events that
+/// the stream dropped.
 class PathEventInfo {
   final PathEventKind kind;
   final String? remoteAddr;
@@ -36,17 +38,19 @@ class PathEventInfo {
           missed == other.missed;
 }
 
-/// Discriminant for [`PathEventInfo`]. `Unknown` absorbs any future `#[non_exhaustive]` variant.
+/// The kind of a [`PathEventInfo`]. `Unknown` holds each variant that a future iroh version adds to
+/// the `#[non_exhaustive]` iroh enum.
 enum PathEventKind { opened, closed, selected, lagged, unknown }
 
-/// One relay server's connection status (a `homeRelayStatus` update carries a list of these).
+/// The connection status of one home relay server. A `homeRelayStatus` update contains a list of
+/// these values.
 class RelayStatusInfo {
   final String url;
   final bool connected;
   final String? lastError;
 
   /// The reason that the relay server gave when it denied the authentication of the endpoint.
-  /// This failure does not usually go away with retries.
+  /// Retries do not usually fix this failure.
   final String? authDeniedReason;
 
   const RelayStatusInfo({

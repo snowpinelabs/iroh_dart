@@ -4,9 +4,9 @@ library;
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// `Endpoint.bind()` -> `addr()` -> `close()` round-trip, async `Future`s complete on Dart's event
-/// loop, and the embedded tokio runtime survives repeated bind/close with no leak or hang. Relays
-/// are disabled so the test needs no network.
+/// Tests the `Endpoint.bind()` -> `addr` -> `close()` cycle. Async `Future`s must complete on the
+/// Dart event loop. The embedded tokio runtime must survive repeated bind and close cycles without
+/// a leak or a hang. Relay servers are disabled, so the tests do not need a network.
 void main() {
   setUpAll(() async {
     await Iroh.init();

@@ -1,8 +1,10 @@
-//! In-process multi-protocol multiplexing - the Dart->Rust `ProtocolHandler` bridge. A Dart async
-//! callback handles connections for a given ALPN; iroh's `Router` runs the accept loop and
-//! dispatches by ALPN. Use this when one process must serve several protocols concurrently; for the
-//! simple case prefer ALPN dispatch over `endpoint.accept()`
-//! (see `test/protocol_dispatch_test.dart`).
+//! This module lets one process serve more than one protocol.
+//!
+//! This module is the bridge from the iroh `ProtocolHandler` trait to a Dart callback. A Dart
+//! callback handles the connections for one ALPN protocol. The iroh `Router` runs the accept loop
+//! and sends each connection to the handler for its ALPN. Use the router when one process must
+//! serve more than one protocol at the same time. For a simple case, call `endpoint.accept()` and
+//! select the handler from the ALPN of the connection. See `test/protocol_dispatch_test.dart`.
 
 use std::sync::{Arc, Mutex as StdMutex};
 
@@ -19,7 +21,7 @@ use crate::runtime::rt;
 
 type AcceptFn = Arc<dyn Fn(Connection) -> DartFnFuture<()> + Send + Sync>;
 
-/// A `ProtocolHandler` that forwards each accepted connection to a Dart async callback.
+/// A `ProtocolHandler` that sends each accepted connection to a Dart callback.
 struct DartProtocolHandler {
     on_accept: AcceptFn,
 }
@@ -32,27 +34,28 @@ impl std::fmt::Debug for DartProtocolHandler {
 
 impl ProtocolHandler for DartProtocolHandler {
     async fn accept(&self, connection: IrohConnection) -> Result<(), AcceptError> {
-        // Clone the Arc so the future doesn't borrow `&self` across the await point.
+        // Clone the `Arc` so that the future does not borrow `&self` across the `await` point.
         let on_accept = self.on_accept.clone();
         on_accept(Connection::wrap(connection)).await;
         Ok(())
     }
 }
 
-/// A running multi-protocol router. The router aborts when this handle is dropped; call
-/// [`Router::shutdown`] to stop it cleanly.
+/// A router for more than one protocol, with an active accept loop. The router aborts when its
+/// handle is released. Call [`Router::shutdown`] to stop it cleanly.
 #[frb(opaque)]
 pub struct Router {
     inner: IrohRouter,
 }
 
-/// Accumulates ALPN -> Dart-handler registrations, then [`RouterBuilder::spawn`]s the accept loop.
+/// Collects the Dart handlers for the ALPN protocols. [`RouterBuilder::spawn`] then starts the
+/// accept loop.
 #[frb(opaque)]
 pub struct RouterBuilder {
     inner: StdMutex<Option<IrohRouterBuilder>>,
 }
 
-/// Starts a [`RouterBuilder`] over `endpoint`.
+/// Makes a [`RouterBuilder`] for `endpoint`.
 pub fn router_builder(endpoint: &Endpoint) -> RouterBuilder {
     RouterBuilder {
         inner: StdMutex::new(Some(IrohRouter::builder(endpoint.inner.clone()))),
@@ -60,9 +63,11 @@ pub fn router_builder(endpoint: &Endpoint) -> RouterBuilder {
 }
 
 impl RouterBuilder {
-    /// Registers `on_accept` as the handler for connections negotiating `alpn`. The Dart callback
-    /// receives each accepted [`Connection`] and resolves when it has finished handling it (after
-    /// which the connection is dropped unless other clones are held).
+    /// Registers `on_accept` as the handler for the connections that negotiate `alpn`.
+    ///
+    /// The Dart callback receives each accepted [`Connection`]. Its future completes when the
+    /// callback has finished with the connection. After that, the router does not keep the
+    /// connection. Returns an error if [`RouterBuilder::spawn`] already started the router.
     pub fn accept(
         &self,
         alpn: Vec<u8>,
@@ -79,7 +84,8 @@ impl RouterBuilder {
         Ok(())
     }
 
-    /// Spawns the router's accept loop and returns the running [`Router`].
+    /// Starts the accept loop of the router and returns the [`Router`]. Returns an error if
+    /// the router already started.
     pub fn spawn(&self) -> Result<Router> {
         let builder = self
             .inner
@@ -95,7 +101,7 @@ impl RouterBuilder {
 }
 
 impl Router {
-    /// Shuts the router down gracefully, stopping its accept loop.
+    /// Stops the router and its accept loop cleanly. Returns an error if the shutdown fails.
     pub async fn shutdown(&self) -> Result<()> {
         let inner = self.inner.clone();
         rt().spawn(async move { inner.shutdown().await })

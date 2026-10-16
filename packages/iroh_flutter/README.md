@@ -1,6 +1,6 @@
 # iroh_flutter
 
-**Flutter plugin** for **[iroh](https://github.com/n0-computer/iroh) 1.0** — peer-to-peer QUIC
+**Flutter plugin** for **[iroh](https://github.com/n0-computer/iroh) 1.0**: peer-to-peer QUIC
 networking (endpoints, connections, streams, relays, address lookup) on **Android, iOS, macOS,
 Linux, and Windows**.
 
@@ -13,22 +13,22 @@ automatically by cargokit on first build if you don't already have one.
 
 ```yaml
 dependencies:
-  iroh_flutter: ^1.0.3
+  iroh_flutter: ^1.1.0
 ```
 
 ```dart
 import 'package:iroh_flutter/iroh_flutter.dart';
 
 Future<void> main() async {
-  await Iroh.init(); // native lib is bundled by the plugin build — no setup step
+  await Iroh.init(); // native lib is bundled by the plugin build, no setup step
   final secret = SecretKey.generate();
   print('my id: ${secret.publicKey.toZ32()}');
-  // ... Endpoint.bind(), connect(), accept(), etc. — see the iroh_quic docs.
+  // ... Endpoint.bind(), connect(), accept(), etc. See the iroh_quic docs.
 }
 ```
 
 The API is identical to `iroh_quic`; see its
-[README](https://pub.dev/packages/iroh_quic) and the iroh 1.0 docs.
+[README](https://pub.dev/packages/iroh_quic) and the iroh 1.x docs.
 
 ## Platforms
 
@@ -39,7 +39,7 @@ The API is identical to `iroh_quic`; see its
 - **Android:** cargokit cross-compiles a per-ABI cdylib via `cargo-ndk` into `jniLibs` (NDK r28+ for
   the 16 KB page-alignment Google Play requirement). `minSdk` 24. The plugin registers a tiny
   `IrohFlutterPlugin` class that hands the application `Context` to the native library during
-  engine startup — iroh needs it over JNI for system DNS, interface enumeration, and TLS trust.
+  engine startup. iroh needs it over JNI for system DNS, interface enumeration, and TLS trust.
   Nothing to configure; but if you build a custom engine setup that skips plugin registration,
   make sure `IrohFlutterPlugin` is registered before the first iroh call.
 - **iOS / macOS:** cargokit builds a staticlib and `-force_load`s it into the plugin framework, so

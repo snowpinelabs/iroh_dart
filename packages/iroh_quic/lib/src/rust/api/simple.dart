@@ -6,11 +6,11 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-/// Returns the ABI version compiled into this native library.
+/// Returns the ABI version that is compiled into this native library.
 ///
-/// Also serves as a minimal end-to-end check that the FFI path works:
-/// Rust -> FRB glue -> native lib -> Dart loader -> Dart call.
+/// This function is also a minimal end-to-end check of the FFI path:
+/// Rust -> FRB glue code -> native library -> Dart loader -> Dart call.
 int irohdartAbiVersion() => RustLib.instance.api.crateApiSimpleIrohdartAbiVersion();
 
-/// Returns the `iroh` crate version this wrapper was built against, for diagnostics.
+/// Returns the version of the `iroh` crate in this native library. Use it for diagnostics.
 String irohdartIrohVersion() => RustLib.instance.api.crateApiSimpleIrohdartIrohVersion();

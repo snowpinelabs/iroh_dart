@@ -11,26 +11,29 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartProtocolHandler`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `accept`, `fmt`
 
-/// Starts a [`RouterBuilder`] over `endpoint`.
+/// Makes a [`RouterBuilder`] for `endpoint`.
 Future<RouterBuilder> routerBuilder({required Endpoint endpoint}) =>
     RustLib.instance.api.crateApiRouterRouterBuilder(endpoint: endpoint);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Router>>
 abstract class Router implements RustOpaqueInterface {
-  /// Shuts the router down gracefully, stopping its accept loop.
+  /// Stops the router and its accept loop cleanly. Returns an error if the shutdown fails.
   Future<void> shutdown();
 }
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RouterBuilder>>
 abstract class RouterBuilder implements RustOpaqueInterface {
-  /// Registers `on_accept` as the handler for connections negotiating `alpn`. The Dart callback
-  /// receives each accepted [`Connection`] and resolves when it has finished handling it (after
-  /// which the connection is dropped unless other clones are held).
+  /// Registers `on_accept` as the handler for the connections that negotiate `alpn`.
+  ///
+  /// The Dart callback receives each accepted [`Connection`]. Its future completes when the
+  /// callback has finished with the connection. After that, the router does not keep the
+  /// connection. Returns an error if [`RouterBuilder::spawn`] already started the router.
   Future<void> accept({
     required List<int> alpn,
     required FutureOr<void> Function(Connection) onAccept,
   });
 
-  /// Spawns the router's accept loop and returns the running [`Router`].
+  /// Starts the accept loop of the router and returns the [`Router`]. Returns an error if
+  /// the router already started.
   Future<Router> spawn();
 }

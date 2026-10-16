@@ -3,23 +3,23 @@
 **Pure-Dart** binding for **[iroh](https://github.com/n0-computer/iroh) 1.0** - peer-to-peer QUIC
 networking (endpoints, connections, streams, relays, address lookup) on **desktop Linux, macOS, and
 Windows**. **No Flutter required.** For **Android / iOS**, use the companion
-[`iroh_flutter`](https://pub.dev/packages/iroh_flutter) plugin — same API, native build bundled into
+[`iroh_flutter`](https://pub.dev/packages/iroh_flutter) plugin: same API, native build bundled into
 your app.
 
 `iroh_quic` **wraps** the iroh Rust core; it does not re-implement iroh
-in Dart. The Dart API mirrors iroh 1.0's nouns exactly (`Endpoint` / `EndpointId` / `EndpointAddr`,
+in Dart. The Dart API mirrors iroh 1.x's nouns exactly (`Endpoint` / `EndpointId` / `EndpointAddr`,
 `addressLookup`), so iroh's docs and the n0 examples transfer directly.
 
 ## Quick start
 
-Download the signed prebuilt native library for your platform once — no Rust toolchain needed:
+Download the signed prebuilt native library for your platform once (no Rust toolchain needed):
 
 ```sh
 dart pub add iroh_quic
 dart run iroh_quic:setup   # downloads + verifies the prebuilt lib into a per-user cache
 ```
 
-(Prefer to build it yourself? `cd rust && cargo build --release` instead — the loader finds that too.)
+(Prefer to build it yourself? `cd rust && cargo build --release` instead; the loader finds that too.)
 
 ```dart
 import 'dart:typed_data';
@@ -70,7 +70,7 @@ pure-Dart program actually runs on:
 
 The loader finds the prebuilt in its cache, a local `cargo build` under
 `rust/target/{debug,release}/libirohdart_ffi.{so,dylib,dll}`, or a copy next to your compiled
-executable — or pass an explicit `libraryPath:`.
+executable, or pass an explicit `libraryPath:`.
 
 **Mobile (Android / iOS):** these are not `dart run` targets. Use the
 [`iroh_flutter`](https://pub.dev/packages/iroh_flutter) plugin, which compiles and bundles the native
@@ -79,7 +79,7 @@ library into your app automatically.
 ## Building the native library yourself
 
 Don't want the prebuilt download (offline build, full audit, an unpublished arch, or a custom
-profile)? Compile the crate from source — a [Rust toolchain](https://rustup.rs) is the only
+profile)? Compile the crate from source. A [Rust toolchain](https://rustup.rs) is the only
 prerequisite. The command installs the library into the same cache `iroh_quic:setup` uses, so
 `Iroh.init()` finds it automatically:
 

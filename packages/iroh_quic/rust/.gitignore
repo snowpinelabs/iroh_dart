@@ -1,3 +1,4 @@
 /target
-# Cargo.lock is committed: this crate ships native code, so we pin the exact dependency tree
-# (the one verified on iOS/Android) for reproducible builds.
+# The repository keeps `Cargo.lock` because this crate ships native code.
+# The lockfile pins the exact dependency tree that passed the tests on iOS and Android.
+# Thus the builds are reproducible.

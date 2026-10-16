@@ -1,10 +1,10 @@
-// `dart run iroh_quic:setup` — download the signed prebuilt native library for the current
-// platform from the GitHub Release and install it into the per-user cache, so consumers do not
-// need a Rust toolchain. The loader (lib/src/ffi/loader.dart) picks it up automatically.
+// `dart run iroh_quic:setup` downloads the prebuilt library for the current platform from the
+// GitHub Release. Then it installs the file into the cache, so users do not need a Rust toolchain.
+// The loader (lib/src/ffi/loader.dart) finds the file there automatically.
 //
-//   dart run iroh_quic:setup            # download + verify + install
-//   dart run iroh_quic:setup --force    # re-download even if already installed
-//   dart run iroh_quic:setup --no-verify  # skip the signature check (NOT recommended)
+//   dart run iroh_quic:setup              # download, verify, and install
+//   dart run iroh_quic:setup --force      # download again, also if the file is in the cache
+//   dart run iroh_quic:setup --no-verify  # do not verify the signature (NOT recommended)
 
 import 'dart:ffi' show Abi;
 import 'dart:io';
@@ -54,7 +54,7 @@ Future<void> main(List<String> args) async {
       final ok = await _verifySignature(libBytes, sigBytes);
       if (!ok) {
         stderr.writeln(
-          'iroh_quic: SIGNATURE VERIFICATION FAILED for ${target.assetName} — '
+          'iroh_quic: SIGNATURE VERIFICATION FAILED for ${target.assetName}. '
           'refusing to install. (Override with --no-verify at your own risk.)',
         );
         exitCode = 1;
@@ -65,7 +65,8 @@ Future<void> main(List<String> args) async {
     }
 
     Directory(prebuiltCacheDir(target)).createSync(recursive: true);
-    // Write to a temp file then rename, so a concurrent loader never observes a partial library.
+    // Write to a temporary file, then rename it. Thus a loader in a different process cannot see a
+    // partial native library.
     final tmp = File('$dest.tmp');
     await tmp.writeAsBytes(libBytes, flush: true);
     tmp.renameSync(dest);
@@ -117,7 +118,7 @@ Uint8List _hexToBytes(String hex) {
 
 void _printUsage() {
   stdout.writeln('''
-iroh_quic:setup — download the signed prebuilt native library for this platform.
+iroh_quic:setup - download the signed prebuilt native library for this platform.
 
 Usage:
   dart run iroh_quic:setup [--force] [--no-verify]

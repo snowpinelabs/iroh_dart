@@ -1,14 +1,14 @@
-// `dart run iroh_quic:build` — compile the native library from source with cargo and install it into
-// the same per-user cache `iroh_quic:setup` uses, so `Iroh.init()` finds it. For people who would
-// rather build the Rust core themselves than download a prebuilt binary (no network, full audit,
-// custom target, or an arch we publish no prebuilt for).
+// `dart run iroh_quic:build` compiles the native library from source with cargo. Then it installs
+// the native library into the cache that `iroh_quic:setup` uses, where `Iroh.init()` finds it.
+// Use this tool if you do not want the prebuilt library. For example: you have no network, you
+// want to audit the code, or no prebuilt library exists for your target.
 //
 //   dart run iroh_quic:build              # cargo build --release for the host, then install
-//   dart run iroh_quic:build --debug      # faster, unoptimized build
+//   dart run iroh_quic:build --debug      # faster build, no optimization
 //   dart run iroh_quic:build --manifest-path path/to/rust/Cargo.toml
 //
-// Requires a Rust toolchain (https://rustup.rs). When iroh_quic is consumed from pub.dev, the Rust
-// crate ships inside the package, so this works straight from the pub cache.
+// This tool needs a Rust toolchain (https://rustup.rs). The pub.dev package contains the crate,
+// so this tool also works from the pub cache.
 
 import 'dart:io';
 import 'dart:isolate';
@@ -64,7 +64,7 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  // cargo writes <crate>/target/<profile>/<libFileName>; install it where the loader looks.
+  // cargo writes <crate>/target/<profile>/<libFileName>. Copy it to the path that the loader reads.
   final crateDir = File(manifestPath).parent.path;
   final built = File('$crateDir/target/$profile/${target.libFileName}');
   if (!built.existsSync()) {
@@ -87,15 +87,15 @@ String? _optionValue(List<String> args, String name) {
   return null;
 }
 
-/// The crate ships at `<iroh_quic package root>/rust`. Resolve the package root via the package URI
-/// (works whether run from source or the pub cache; `Platform.script` would point at the pub
-/// snapshot dir under `dart run`, not the package).
+/// Returns the path of the crate manifest, `<iroh_quic package root>/rust/Cargo.toml`. This
+/// function finds the package root from the package URI. This works from source and from the pub
+/// cache. Do not use `Platform.script`: under `dart run`, it gives the pub snapshot directory.
 Future<String> _defaultManifestPath() async {
   final libUri = await Isolate.resolvePackageUri(Uri.parse('package:iroh_quic/iroh_quic.dart'));
   if (libUri == null) {
-    throw StateError('cannot resolve package:iroh_quic — pass --manifest-path explicitly');
+    throw StateError('cannot resolve package:iroh_quic. Pass --manifest-path explicitly.');
   }
-  // libUri -> <pkg>/lib/iroh_quic.dart; the crate sits at <pkg>/rust.
+  // libUri is <pkg>/lib/iroh_quic.dart. The crate is in <pkg>/rust.
   final pkgRoot = File.fromUri(libUri).parent.parent.path;
   return '$pkgRoot/rust/Cargo.toml';
 }
@@ -111,13 +111,13 @@ Future<bool> _hasCargo() async {
 
 void _printUsage() {
   stdout.writeln('''
-iroh_quic:build — compile the native library from source and install it for Iroh.init().
+iroh_quic:build - compile the native library from source and install it for Iroh.init().
 
 Usage:
   dart run iroh_quic:build [--debug] [--manifest-path <rust/Cargo.toml>]
 
   --debug                 Unoptimized build (faster to compile).
-  --manifest-path <path>  Cargo.toml of the iroh_quic crate (default: ../rust/Cargo.toml).
+  --manifest-path <path>  Cargo.toml of the iroh_quic crate (default: <package root>/rust/Cargo.toml).
   -h, --help              Show this help.
 
 Requires a Rust toolchain (https://rustup.rs). Prefer no toolchain? Use `dart run iroh_quic:setup`

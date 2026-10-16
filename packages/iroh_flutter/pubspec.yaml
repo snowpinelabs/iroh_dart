@@ -1,9 +1,9 @@
 name: iroh_flutter
 description: >-
-  Flutter plugin for iroh 1.0 - peer-to-peer QUIC networking on Android, iOS,
+  Flutter plugin for iroh 1.x - peer-to-peer QUIC networking on Android, iOS,
   macOS, Linux, and Windows. Builds the native Rust core into your app via
   cargokit and exposes the full iroh_quic API.
-version: 1.0.3
+version: 1.1.0
 homepage: https://github.com/snowpinelabs/iroh_dart
 repository: https://github.com/snowpinelabs/iroh_dart
 issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
@@ -18,30 +18,32 @@ environment:
   sdk: ^3.12.0
   flutter: ">=3.27.0"
 
-# Member of the repo-root pub workspace (see /pubspec.yaml). Resolves iroh_quic to the local copy
-# in-workspace and to the hosted version for external consumers.
+# This package is a member of the pub workspace at the repository root (see /pubspec.yaml).
+# In the workspace, iroh_quic resolves to the local copy. Other apps receive the hosted version.
 resolution: workspace
 
 dependencies:
   flutter:
     sdk: flutter
-  # The Dart API + FFI loader live in iroh_quic; this plugin only adds the native build. Hosted
-  # constraint (not a path dep) so the published archive is valid; resolves locally in-workspace.
-  iroh_quic: ^1.0.3
+  # iroh_quic contains the Dart API and the FFI loader. This plugin only adds the native build.
+  # A hosted constraint (not a path dependency) keeps the published archive valid.
+  # In the workspace, this constraint resolves to the local copy.
+  iroh_quic: ^1.1.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
   plugin:
-    # FFI plugin (no per-platform Dart classes): cargokit hooks the Rust build into each platform's
-    # native build, and iroh_quic's loader resolves the symbols via dart:ffi.
+    # This is an FFI plugin without Dart classes for each platform. cargokit adds the Rust build
+    # to the native build of each platform. The iroh_quic loader finds the symbols through dart:ffi.
     #
-    # Android is the one platform with a real plugin class: iroh needs the app's JavaVM +
-    # Context over JNI (system DNS, interface enumeration, TLS trust). IrohFlutterPlugin hands
-    # them to the native lib during engine startup - before Dart can call the FFI - which fixes
-    # the release-build abort "android context was not initialized" (issue #8). The cargokit
-    # native build is hooked from android/build.gradle either way.
+    # Android is the only platform with a plugin class. iroh needs the JavaVM and the Android
+    # Context of the app through JNI. It uses them to read the system DNS servers, list the network
+    # interfaces, and check TLS certificates. IrohFlutterPlugin gives them to the native library
+    # when the engine starts, before Dart can call the FFI. Without this Android bootstrap, a
+    # release build stops with the error "android context was not initialized".
+    # android/build.gradle adds the cargokit native build to the Android build.
     platforms:
       android:
         package: io.snowpine.iroh_flutter

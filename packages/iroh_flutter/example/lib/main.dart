@@ -3,9 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:iroh_flutter/iroh_flutter.dart';
 
-/// Example/verification harness for iroh_flutter. On a real device it
-/// proves the native library loads (ABI handshake), the async runtime drives iroh, and two
-/// in-process endpoints complete a byte-identical echo over a direct loopback connection.
+/// Example app for the plugin. On a real device, it shows that the native library loads and passes
+/// the ABI version check. It also shows that the async runtime drives iroh. Two endpoints in one
+/// process then do a byte-identical echo over a direct loopback connection.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const IrohExampleApp());
@@ -53,7 +53,7 @@ class _HomePageState extends State<_HomePage> {
     }
   }
 
-  /// Binds two endpoints and runs a byte-identical echo over a direct loopback connection.
+  /// Binds two endpoints and does a byte-identical echo over a direct loopback connection.
   Future<void> _runEcho() async {
     setState(() {
       _busy = true;

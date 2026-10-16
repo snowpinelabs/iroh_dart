@@ -1,61 +1,70 @@
-// Prebuilt-binary distribution metadata shared by the loader (lib/src/ffi/loader.dart) and the
-// installer (bin/setup.dart). `dart run iroh_quic:setup` downloads the signed native library for
-// the current platform from the GitHub Release and writes it to [prebuiltCacheLibPath]; the loader
-// then finds it there without the consumer needing a Rust toolchain.
+// Data about the prebuilt library. The loader (lib/src/ffi/loader.dart) and the installer
+// (bin/setup.dart) use it. `dart run iroh_quic:setup` downloads the prebuilt library for the
+// current platform from the GitHub Release. It writes the file to [prebuiltCacheLibPath]. The
+// loader then finds the file there, and the user does not need a Rust toolchain.
 
 import 'dart:ffi' show Abi;
 import 'dart:io' show Platform;
 
-/// Version of the prebuilt native library this Dart package expects.
+/// The version of the prebuilt library that this Dart package expects.
 ///
-/// MUST match `version:` in pubspec.yaml: the installer downloads the signed assets from the
-/// `v$kIrohdartLibVersion` GitHub Release, and the cache is keyed by this version so upgrades
-/// re-download rather than load a stale library.
-const String kIrohdartLibVersion = '1.0.3';
+/// It MUST be equal to `version:` in pubspec.yaml. The installer downloads the signed assets from
+/// the `v$kIrohdartLibVersion` GitHub Release. The cache path contains this version. Thus a new
+/// package version downloads a new prebuilt library, and does not load an old one.
+const String kIrohdartLibVersion = '1.1.0';
 
-/// Base URL of the GitHub Release that hosts the signed prebuilt libraries.
+/// The base URL of the GitHub Release that holds the prebuilt libraries.
 const String kPrebuiltUrlPrefix =
     'https://github.com/snowpinelabs/iroh_dart/releases/download/v$kIrohdartLibVersion/';
 
-/// Ed25519 public key (hex) whose private half signs the prebuilt binaries in CI.
+/// The Ed25519 public key (hex) of the key pair that signs the prebuilt libraries in CI.
 ///
-/// The installer verifies each downloaded library against this key before installing it. This is the
-/// project's existing signing key (originally generated for cargokit); the `IROHDART_SIGNING_KEY`
-/// repository secret holds its private half (the 128-hex `seed||public` cargokit key works verbatim,
-/// or a 64-hex 32-byte seed). To rotate: `dart run tool/gen_key.dart`, paste the new public hex here,
-/// set the new private hex as the secret, and bump the package version.
+/// The installer verifies the signature of each downloaded prebuilt library with this key before it
+/// installs the file. The `IROHDART_SIGNING_KEY` repository secret holds the private key. The
+/// secret can be a 128-hex cargokit `seed||public` key or a 64-hex 32-byte seed.
+///
+/// To replace the key pair:
+///
+/// 1. Run `dart run tool/gen_key.dart`.
+/// 2. Put the new public key hex here.
+/// 3. Set the new private key hex as the repository secret.
+/// 4. Increase the package version.
 const String kPrebuiltPublicKeyHex =
     '74b7c73d253932835af9e3f63c99135e85aaff6a8ab2a7b0de0558a453246743';
 
-/// A native target iroh_quic publishes a prebuilt library for.
+/// A native target that has a prebuilt library.
 class PrebuiltTarget {
   const PrebuiltTarget(this.triple, this.libFileName);
 
-  /// Rust target triple, e.g. `aarch64-apple-darwin`.
+  /// The Rust target triple, for example `aarch64-apple-darwin`.
   final String triple;
 
-  /// Platform library file name the loader opens, e.g. `libirohdart_ffi.dylib`.
+  /// The platform file name of the native library that the loader opens, for example
+  /// `libirohdart_ffi.dylib`.
   final String libFileName;
 
-  /// Release asset name carrying the library, e.g. `irohdart_ffi-aarch64-apple-darwin.dylib`.
-  /// The triple keeps it unique across the two same-extension Apple/Windows arches.
+  /// The name of the release asset that contains the prebuilt library, for example
+  /// `irohdart_ffi-aarch64-apple-darwin.dylib`. Each operating system has two architectures with
+  /// the same file extension. The triple in the name makes each asset name unique.
   String get assetName {
     final ext = libFileName.substring(libFileName.lastIndexOf('.'));
     return 'irohdart_ffi-$triple$ext';
   }
 
-  /// Detached Ed25519 signature asset name (`<assetName>.sig`).
+  /// The name of the asset that contains the detached Ed25519 signature (`<assetName>.sig`).
   String get signatureAssetName => '$assetName.sig';
 
-  /// Absolute URL of the library asset on the GitHub Release.
+  /// The absolute URL of the prebuilt library asset on the GitHub Release.
   Uri get assetUrl => Uri.parse('$kPrebuiltUrlPrefix$assetName');
 
-  /// Absolute URL of the detached signature asset.
+  /// The absolute URL of the detached signature asset.
   Uri get signatureUrl => Uri.parse('$kPrebuiltUrlPrefix$signatureAssetName');
 }
 
-/// The prebuilt target for the current process, or `null` when this platform/arch has no prebuilt
-/// (e.g. iOS/Android — those are app-embedded, not `dart run` targets, and an unknown desktop arch).
+/// Returns the prebuilt target of the current process. Returns `null` if no prebuilt library
+/// exists for this platform and architecture. iOS and Android have no prebuilt library, because
+/// apps on these platforms contain the native library. An unknown desktop architecture also gives
+/// `null`.
 PrebuiltTarget? currentPrebuiltTarget() {
   switch (Abi.current()) {
     case Abi.macosArm64:
@@ -75,12 +84,14 @@ PrebuiltTarget? currentPrebuiltTarget() {
   }
 }
 
-/// Absolute path where `dart run iroh_quic:setup` installs the prebuilt library for [target] and
-/// where the loader looks for it. Override the root directory with `IROHDART_CACHE_DIR`.
+/// Returns the absolute path of the prebuilt library for [target] in the cache.
+/// `dart run iroh_quic:setup` writes the file to this path, and the loader reads it from there.
+/// Set `IROHDART_CACHE_DIR` to change the root directory of the cache.
 String prebuiltCacheLibPath(PrebuiltTarget target) =>
     _join([prebuiltCacheDir(target), target.libFileName]);
 
-/// Directory holding the installed library for [target] (the parent of [prebuiltCacheLibPath]).
+/// Returns the cache directory that holds the prebuilt library for [target]. It is the parent
+/// directory of [prebuiltCacheLibPath].
 String prebuiltCacheDir(PrebuiltTarget target) =>
     _join([_cacheRoot(), 'iroh_quic', 'v$kIrohdartLibVersion', target.triple]);
 
@@ -100,6 +111,6 @@ String _cacheRoot() {
   return _join([home, '.cache']);
 }
 
-// dart:io accepts forward slashes on every supported platform, so a plain '/' join avoids a
-// dependency on package:path for the handful of paths we build.
+// dart:io accepts forward slashes on all supported platforms. Thus a '/' join is sufficient, and
+// this file does not need package:path.
 String _join(List<String> parts) => parts.join('/');

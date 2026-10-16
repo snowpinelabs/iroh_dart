@@ -1,22 +1,24 @@
-//! Android JNI bootstrap - installs the app's `JavaVM` + `Context` into the native layer.
+//! Android JNI bootstrap. This module gives the `JavaVM` and the `Context` of the app to the
+//! native layer.
 //!
-//! iroh needs a JNI handle on the Android app before the first `Endpoint` exists:
+//! iroh needs a JNI handle to the Android app before the first endpoint exists:
 //!
-//! * `iroh-dns` reads the system DNS servers through `ndk-context`. Uninitialized, that JNI
-//!   lookup panics - and this crate ships release builds with `panic = "abort"`, so
-//!   `Endpoint.bind` aborts the whole app with `android context was not initialized`
-//!   (issue #8). Debug builds catch the panic and fall back to public DNS, which is why the
-//!   crash only appears in `flutter build apk --release`.
-//! * `netdev` (interface enumeration for iroh's netwatch) probes `ndk-context` with
-//!   `catch_unwind`, which is equally fatal under `panic = "abort"`.
-//! * `reqwest` (iroh's pkarr HTTPS publisher) verifies TLS certificates through
-//!   `rustls-platform-verifier`, which needs the same context plus its Kotlin support classes
-//!   (bundled by the plugin's Gradle build).
+//! * `iroh-dns` reads the system DNS servers through `ndk-context`. If `ndk-context` has no
+//!   context, this JNI call panics. Release builds of this crate use `panic = "abort"`. Thus
+//!   `Endpoint.bind` stops the full app with the message `android context was not initialized`.
+//!   Debug builds catch the panic and use public DNS servers. Thus the crash occurs only in
+//!   `flutter build apk --release`.
+//! * `netdev` gets the network interfaces for the iroh `netwatch` crate. It reads `ndk-context`
+//!   inside `catch_unwind`, which also stops the app under `panic = "abort"`.
+//! * `reqwest` publishes the pkarr records of iroh over HTTPS. It verifies TLS certificates
+//!   through `rustls-platform-verifier`. That verifier needs the same context and its Kotlin
+//!   support classes. The Gradle build of the plugin bundles these classes.
 //!
-//! The `IrohFlutterPlugin` Java class calls [`initAndroidContext`] from `onAttachedToEngine` -
-//! the Android embedding registers plugins while the engine starts, before any Dart code can
-//! reach the FFI surface. Initialization is process-wide and idempotent; engine re-attaches
-//! (hot restart, add-to-app, extra engines) are no-ops.
+//! The `IrohFlutterPlugin` Java class of the `iroh_flutter` plugin calls [`initAndroidContext`]
+//! from `onAttachedToEngine`. The Android embedding registers plugins when the engine starts,
+//! before Dart code can call the FFI functions. The initialization applies to the full process,
+//! and a second call has no effect. Thus a new attach of the engine does nothing. This occurs on
+//! hot restart, in add-to-app, and with more engines.
 //!
 //! [`initAndroidContext`]: Java_io_snowpine_iroh_1flutter_IrohFlutterPlugin_initAndroidContext
 
@@ -24,10 +26,12 @@ use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JClass, JObject};
 use jni::EnvUnowned;
 
-/// `IrohFlutterPlugin.initAndroidContext(Context)` - publishes the process `JavaVM` and the
-/// application `Context` to `ndk-context` (via [`iroh_dns::install_android_jni_context`]) and
-/// initializes `rustls-platform-verifier`. Errors surface as a Java `RuntimeException` so a
-/// broken bootstrap fails loudly at startup instead of aborting later inside iroh.
+/// Implements `IrohFlutterPlugin.initAndroidContext(Context)`.
+///
+/// Gives the process `JavaVM` and the application `Context` to `ndk-context` through
+/// [`iroh_dns::install_android_jni_context`]. Also initializes `rustls-platform-verifier`.
+/// If an error occurs, the function throws a Java `RuntimeException`. Thus a bad bootstrap fails
+/// clearly at startup, and iroh does not stop the app later.
 #[no_mangle]
 pub extern "system" fn Java_io_snowpine_iroh_1flutter_IrohFlutterPlugin_initAndroidContext<
     'local,
@@ -40,12 +44,13 @@ pub extern "system" fn Java_io_snowpine_iroh_1flutter_IrohFlutterPlugin_initAndr
         let vm = env.get_java_vm()?;
         let global_context = env.new_global_ref(&context)?;
 
-        // Idempotent (OnceCell inside); takes its own global refs to the context + class loader.
+        // A second call has no effect because this function uses a `OnceCell`.
+        // The function keeps its own global references to the context and the class loader.
         rustls_platform_verifier::android::init_with_env(env, context)?;
 
-        // ndk-context asserts on double-initialization, so guard with Once. Both raw pointers
-        // must stay valid for the life of the process: the JavaVM already is, and `into_raw`
-        // deliberately leaks the context's global ref.
+        // `ndk-context` asserts on a second initialization, so a `Once` guards the call.
+        // Both raw pointers must stay valid until the process stops. The `JavaVM` pointer is
+        // always valid. `into_raw` leaks the global reference to the context on purpose.
         static NDK_CONTEXT_INIT: std::sync::Once = std::sync::Once::new();
         NDK_CONTEXT_INIT.call_once(|| unsafe {
             iroh_dns::install_android_jni_context(

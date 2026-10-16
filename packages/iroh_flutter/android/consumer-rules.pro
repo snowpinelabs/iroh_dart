@@ -1,4 +1,4 @@
-# rustls-platform-verifier (iroh's TLS certificate verification) resolves these Kotlin classes
-# via JNI FindClass at runtime; R8 sees no Java-side references, so without keeps they would be
-# stripped from release builds and every HTTPS verification would fail.
+# rustls-platform-verifier checks TLS certificates for iroh. At run time, it finds these Kotlin
+# classes through JNI FindClass. R8 sees no references to them from Java code. Without these keep
+# rules, R8 removes the classes from release builds, and all HTTPS certificate checks fail.
 -keep class org.rustls.platformverifier.** { *; }
