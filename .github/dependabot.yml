@@ -55,3 +55,7 @@ updates:
     ignore:
       # The Dart rule above applies here too. Cargo.toml pins the version with `=` (exact version).
       - dependency-name: "flutter_rust_bridge"
+      # libc 0.2.190 removes `in6_ifreq` and `_dyld_image_count` on iOS. Thus `netdev` and
+      # `backtrace` do not compile for iOS. Cargo.lock keeps libc 0.2.189.
+      - dependency-name: "libc"
+        versions: ["0.2.190"]
