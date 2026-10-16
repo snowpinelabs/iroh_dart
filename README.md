@@ -1,6 +1,6 @@
 # iroh_dart monorepo
 
-Dart + Flutter bindings for **[iroh](https://github.com/n0-computer/iroh) 1.0**: peer-to-peer QUIC
+Dart + Flutter bindings for **[iroh](https://github.com/n0-computer/iroh) v1.3.0**: peer-to-peer QUIC
 networking (endpoints, connections, streams, relays, address lookup) over the iroh Rust core via
 [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge) + `dart:ffi`.
 
