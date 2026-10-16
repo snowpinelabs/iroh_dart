@@ -6,9 +6,9 @@ import 'dart:typed_data';
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// Identity and addressing. Ported from iroh-base's `#[cfg(test)]` vectors (key.rs /
-/// endpoint_addr.rs). Because each call dispatches into the real iroh-base crate through FFI,
-/// these are inherently differential against the Rust implementation.
+/// Identity and address types. The test vectors come from the `#[cfg(test)]` tests of iroh-base
+/// (key.rs and endpoint_addr.rs). Each call goes through FFI to the real iroh-base crate. Thus,
+/// these tests also compare the Dart results with the Rust implementation.
 void main() {
   setUpAll(() async {
     await Iroh.init();
@@ -22,7 +22,7 @@ void main() {
       final sig = sk.sign(msg);
       expect(sig.toBytes().length, Signature.lengthBytes);
       expect(pk.verify(msg, sig), isTrue);
-      // Tampered message must fail.
+      // A changed message must fail the check.
       final tampered = Uint8List.fromList('hello worle'.codeUnits);
       expect(pk.verify(tampered, sig), isFalse);
     });

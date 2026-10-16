@@ -1,6 +1,6 @@
 platform :osx, '11.0'
 
-# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+# CocoaPods analytics sends network statistics synchronously. This makes Flutter builds slower.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {

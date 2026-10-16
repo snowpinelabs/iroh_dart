@@ -1,6 +1,8 @@
-//! Custom Dart-implemented address lookup. A Dart async callback resolves an `EndpointId` to its
-//! addresses, letting iroh dial peers known only by id. This is the second Dart->Rust async-trait
-//! bridge (alongside the `Router`/`ProtocolHandler` one).
+//! Custom address lookup with a Dart implementation.
+//!
+//! A Dart callback resolves an endpoint ID to its addresses. Thus iroh can connect to peers that
+//! it knows only by endpoint ID. This module and `router.rs` contain the two bridges from a Rust
+//! async trait to a Dart callback.
 
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -19,7 +21,7 @@ use crate::runtime::rt;
 
 type ResolveFn = Arc<dyn Fn(Vec<u8>) -> DartFnFuture<Option<EndpointAddrParts>> + Send + Sync>;
 
-/// An `AddressLookup` whose `resolve` defers to a Dart async callback.
+/// An `AddressLookup` that sends each `resolve` call to a Dart callback.
 struct DartAddressLookup {
     resolve: ResolveFn,
 }
@@ -30,7 +32,8 @@ impl std::fmt::Debug for DartAddressLookup {
     }
 }
 
-/// Builds an address-lookup [`Item`] from Dart-resolved parts (relay URLs + direct IP addresses).
+/// Builds an address lookup [`Item`] from the parts that the Dart callback returned: relay URLs
+/// and direct IP addresses. Returns an error if a URL or an IP address is not valid.
 fn build_item(endpoint_id: EndpointId, parts: &EndpointAddrParts) -> Result<Item> {
     let mut addrs: Vec<TransportAddr> = Vec::new();
     for url in &parts.relay_urls {
@@ -51,8 +54,9 @@ impl AddressLookup for DartAddressLookup {
     fn resolve(&self, endpoint_id: EndpointId) -> Option<BoxStream<Result<Item, LookupError>>> {
         let resolve = self.resolve.clone();
         let id_bytes = endpoint_id.as_bytes().to_vec();
-        // A 0-or-1-item stream: call the Dart resolver, and if it returns addresses, yield the
-        // built Item. Returning `None`/invalid yields an empty stream (no resolution).
+        // This stream has zero or one item. It calls the Dart callback. If the callback returns
+        // addresses, the stream yields the built `Item`. If the callback returns `None` or
+        // addresses that are not valid, the stream is empty.
         let stream = async_stream::stream! {
             if let Some(item) = resolve(id_bytes)
                 .await
@@ -65,10 +69,16 @@ impl AddressLookup for DartAddressLookup {
     }
 }
 
-/// Binds an endpoint that uses a **Dart-implemented** address lookup (only): the n0 default DNS/pkarr
-/// lookup is cleared and replaced by `resolve`, so `connect`ing to a peer known only by its
-/// `EndpointId` calls back into Dart to discover its addresses. Otherwise identical to
-/// `endpoint_bind`.
+/// Binds an endpoint that uses only a Dart address lookup.
+///
+/// This function removes the default DNS and pkarr address lookup of the `presets::N0`
+/// configuration and uses `resolve` in its place. Thus, when you connect to a peer that you know
+/// only by its endpoint ID, the endpoint calls `resolve` to get the addresses of the peer.
+/// `resolve` receives the 32-byte endpoint ID. It returns the endpoint address parts, or `None` if
+/// it does not know the peer. All other behavior is the same as `endpoint_bind`.
+///
+/// Returns an error if `relay_mode_kind` is not valid, if `secret_key` does not have 32 bytes, or
+/// if the bind fails.
 #[frb]
 pub async fn endpoint_bind_with_address_lookup(
     secret_key: Option<Vec<u8>>,

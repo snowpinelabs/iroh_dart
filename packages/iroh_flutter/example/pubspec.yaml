@@ -7,20 +7,21 @@ environment:
   sdk: ^3.12.0
   flutter: ">=3.27.0"
 
-# Workspace member so `flutter pub get` at the repo root resolves it against the local plugin.
+# This app is a member of the pub workspace. Thus, `flutter pub get` at the repository root
+# resolves iroh_flutter to the local plugin.
 resolution: workspace
 
 dependencies:
   flutter:
     sdk: flutter
-  iroh_flutter: ^1.0.3
+  iroh_flutter: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true

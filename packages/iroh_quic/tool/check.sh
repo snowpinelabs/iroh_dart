@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# iroh_quic green gate - build + test the Rust crate, then analyze + test the pure-Dart package.
-# The PACKAGE is Flutter-free, but it lives in a mixed Dart+Flutter pub workspace, so resolution is
-# done once at the workspace root with `flutter pub get` (falls back to `dart pub get` when Flutter
-# is absent). Run from anywhere; resolves paths itself.
+# iroh_quic green gate. It builds and tests the crate, then analyzes and tests the Dart package.
+# The package does not use Flutter. But the pub workspace contains Dart and Flutter packages.
+# Thus the script resolves dependencies one time at the workspace root with `flutter pub get`.
+# If Flutter is not installed, the script uses `dart pub get`.
+# You can run this script from any directory. The script finds its paths itself.
 set -uo pipefail
 export PATH="$HOME/.cargo/bin:$PATH"
 
@@ -18,8 +19,8 @@ else
 fi
 
 echo "=== rust: irohdart_ffi (build + test) ==="
-# Build first so the host cdylib exists for `dart test` to dlopen (loader.dart's disk-path fallback:
-# rust/target/{debug,release}/libirohdart_ffi.{so,dylib,dll}).
+# Build first, so that `dart test` can open the native library for the host. The loader
+# (lib/src/ffi/loader.dart) finds it in rust/target/{debug,release}/.
 (cd "$PKG/rust" && cargo build) || { echo "BUILD RED: irohdart_ffi"; red=1; }
 (cd "$PKG/rust" && cargo test)  || { echo "CARGO TEST RED: irohdart_ffi"; red=1; }
 

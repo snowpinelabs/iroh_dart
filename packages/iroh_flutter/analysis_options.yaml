@@ -1,5 +1,6 @@
-# Lints for the iroh_flutter plugin's own Dart (lib/). The vendored cargokit build tool and the
-# synced Rust crate are third-party / generated and excluded; the example has its own options.
+# Lint rules for the Dart code of the plugin in lib/.
+# The analyzer ignores cargokit (third-party code) and rust/ (a copy of the crate).
+# The analyzer also ignores the example app, which has its own analysis options.
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
@@ -7,3 +8,11 @@ analyzer:
     - "cargokit/**"
     - "rust/**"
     - "example/**"
+    # Build output and platform directories. Flutter 3.47 and later adds these directories on
+    # `pub get` if they are not there.
+    - "build/**"
+    - "android/**"
+    - "ios/**"
+    - "macos/**"
+    - "linux/**"
+    - "windows/**"

@@ -1,9 +1,10 @@
-# Dependabot keeps dependencies current across the three ecosystems in this repo. Each language is
-# collapsed into a single grouped PR so reviews stay manageable. Deliberate version pins are ignored
-# (they are coupled to other files and must be bumped by hand).
+# Dependabot updates the dependencies of the three ecosystems in this repo.
+# Dependabot puts all updates for one ecosystem into one grouped PR. This keeps the reviews small.
+# Dependabot ignores the intentional version pins. Other files use the same versions.
+# Thus you must change these pins manually.
 version: 2
 updates:
-  # GitHub Actions used by the ci / release workflows.
+  # The GitHub Actions in the ci and release workflows.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -15,11 +16,12 @@ updates:
         patterns:
           - "*"
     ignore:
-      # Pinned to match rust/rust-toolchain.toml (the action tag IS the Rust version). Bump there.
+      # The action tag is the Rust version. It must agree with packages/iroh_quic/rust/rust-toolchain.toml.
+      # Change the version in that file and in the workflows at the same time.
       - dependency-name: "dtolnay/rust-toolchain"
 
-  # Dart/Flutter packages in the workspace: the root (melos), the pure-Dart binding, the Flutter
-  # plugin, and the example app.
+  # The Dart and Flutter packages in the workspace: the root (melos), the pure-Dart package,
+  # the plugin, and the example app.
   - package-ecosystem: "pub"
     directories:
       - "/"
@@ -35,11 +37,11 @@ updates:
         patterns:
           - "*"
     ignore:
-      # The flutter_rust_bridge runtime MUST equal the codegen version; bump it with a codegen run,
-      # not via Dependabot.
+      # The FRB runtime version must be equal to the FRB codegen version.
+      # Change it manually and run the codegen again. Do not let Dependabot change it.
       - dependency-name: "flutter_rust_bridge"
 
-  # Rust crate: the owned flutter_rust_bridge wrapper (canonical copy in iroh_quic).
+  # The crate: the FRB wrapper around iroh. The source copy is in the pure-Dart package.
   - package-ecosystem: "cargo"
     directory: "/packages/iroh_quic/rust"
     schedule:
@@ -51,5 +53,9 @@ updates:
         patterns:
           - "*"
     ignore:
-      # Same codegen-coupling as the Dart side (Cargo pins flutter_rust_bridge = "=2.12.0").
+      # The Dart rule above applies here too. Cargo.toml pins the version with `=` (exact version).
       - dependency-name: "flutter_rust_bridge"
+      # libc 0.2.190 removes `in6_ifreq` and `_dyld_image_count` on iOS. Thus `netdev` and
+      # `backtrace` do not compile for iOS. Cargo.lock keeps libc 0.2.189.
+      - dependency-name: "libc"
+        versions: ["0.2.190"]

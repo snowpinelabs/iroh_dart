@@ -1,16 +1,16 @@
-/// Pure-Dart binding for **iroh 1.0** - peer-to-peer QUIC networking (endpoints,
-/// connections, streams, relays, address lookup) over the shared Rust core.
+/// Pure-Dart binding for **iroh 1.x**, a peer-to-peer QUIC library. iroh gives endpoints,
+/// connections, streams, relay servers, and address lookup.
 ///
-/// This package **wraps** iroh through an owned flutter_rust_bridge crate; it does not re-port
-/// iroh to Dart. The Dart API mirrors iroh 1.0's nouns exactly (`Endpoint` / `EndpointId` /
-/// `EndpointAddr`, `addressLookup`) so iroh's docs and the n0 examples transfer directly.
+/// This package **wraps** the Rust iroh library through the crate `irohdart_ffi` and FRB. It does
+/// not port iroh to Dart. The Dart API uses the same names as iroh (`Endpoint`, `EndpointId`,
+/// `EndpointAddr`, `addressLookup`). Thus the iroh documentation and the n0 examples apply here.
 ///
-/// Start with [Iroh.init]. Query [IrohCapabilities] for the features available on a platform.
+/// Call [Iroh.init] first. Use [IrohCapabilities] to see the features that a platform supports.
 library;
 
 export 'src/capabilities.dart';
-export 'src/endpoint.dart'; // endpoint, connections, accept loop (incl. connection/stream parts)
+export 'src/endpoint.dart'; // Endpoint, connection, stream, and router types.
 export 'src/errors.dart';
-export 'src/key.dart'; // identity & addressing
+export 'src/key.dart'; // Keys, endpoint IDs, and endpoint addresses.
 export 'src/runtime.dart';
-export 'src/watch.dart'; // reactive streams (PathEvent, RelayStatus)
+export 'src/watch.dart'; // Event types for the watch streams (PathEvent, RelayStatus).

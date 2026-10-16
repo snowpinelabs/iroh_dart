@@ -1,13 +1,14 @@
-// Sign prebuilt native libraries with the Ed25519 signing key, emitting a detached `<file>.sig`
-// (raw 64-byte signature) next to each input. Used by .github/workflows/release.yml.
+// Signs prebuilt libraries with the Ed25519 private key. For each input file, it writes a
+// detached `<file>.sig` (raw 64-byte signature) next to the file.
+// .github/workflows/publish.yml runs this tool.
 //
 //   IROHDART_SIGNING_KEY=<hex key> dart run tool/sign_prebuilt.dart <file>...
 //
-// IROHDART_SIGNING_KEY accepts either a 32-byte Ed25519 seed (64 hex) or a 64-byte key in the
-// cargokit / ed25519_edwards `seed||public` form (128 hex) — the latter lets us reuse the original
-// cargokit signing key verbatim; only the first 32 bytes (the seed) are used. The matching public
-// key is kPrebuiltPublicKeyHex in lib/src/ffi/prebuilt.dart; the installer (bin/setup.dart) verifies
-// downloads against it. Generate a fresh pair with tool/gen_key.dart.
+// IROHDART_SIGNING_KEY can be a 32-byte Ed25519 seed (64 hex). It can also be a 64-byte key in the
+// cargokit / ed25519_edwards `seed||public` form (128 hex). Then the tool uses only the first 32
+// bytes (the seed). The public key of the pair is kPrebuiltPublicKeyHex in
+// lib/src/ffi/prebuilt.dart. The installer (bin/setup.dart) verifies downloads with it. To make a
+// new key pair, run tool/gen_key.dart.
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -17,7 +18,9 @@ import 'package:cryptography/cryptography.dart';
 Future<void> main(List<String> args) async {
   final hexKey = Platform.environment['IROHDART_SIGNING_KEY'];
   if (hexKey == null || hexKey.isEmpty) {
-    stderr.writeln('sign_prebuilt: IROHDART_SIGNING_KEY (hex Ed25519 seed or cargokit key) is not set.');
+    stderr.writeln(
+      'sign_prebuilt: IROHDART_SIGNING_KEY (hex Ed25519 seed or cargokit key) is not set.',
+    );
     exitCode = 1;
     return;
   }
@@ -29,8 +32,10 @@ Future<void> main(List<String> args) async {
 
   final seed = _seedFromHex(hexKey.trim());
   if (seed == null) {
-    stderr.writeln('sign_prebuilt: IROHDART_SIGNING_KEY must be 64 hex (32-byte seed) or 128 hex '
-        '(64-byte cargokit seed||public) chars.');
+    stderr.writeln(
+      'sign_prebuilt: IROHDART_SIGNING_KEY must be 64 hex (32-byte seed) or 128 hex '
+      '(64-byte cargokit seed||public) chars.',
+    );
     exitCode = 1;
     return;
   }
@@ -46,8 +51,8 @@ Future<void> main(List<String> args) async {
   }
 }
 
-/// The 32-byte Ed25519 seed from a 64-hex seed or a 128-hex cargokit `seed||public` key (first 32
-/// bytes). Returns null on any other length.
+/// Returns the 32-byte Ed25519 seed from a 64-hex seed or a 128-hex cargokit `seed||public` key.
+/// For the cargokit key, the seed is the first 32 bytes. Returns null for a different length.
 Uint8List? _seedFromHex(String hex) {
   if (hex.length != 64 && hex.length != 128) return null;
   return _hexToBytes(hex.substring(0, 64));

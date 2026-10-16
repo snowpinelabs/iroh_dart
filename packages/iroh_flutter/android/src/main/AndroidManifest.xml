@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.snowpine.iroh_flutter">
-    <!-- iroh needs network + (for Android DNS) network-state access. -->
+    <!-- iroh needs network access. It also needs network state access to read the DNS servers
+         on Android. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </manifest>

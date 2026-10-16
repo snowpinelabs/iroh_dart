@@ -1,6 +1,6 @@
 # iroh_dart monorepo
 
-Dart + Flutter bindings for **[iroh](https://github.com/n0-computer/iroh) 1.0** — peer-to-peer QUIC
+Dart + Flutter bindings for **[iroh](https://github.com/n0-computer/iroh) 1.0**: peer-to-peer QUIC
 networking (endpoints, connections, streams, relays, address lookup) over the iroh Rust core via
 [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge) + `dart:ffi`.
 
@@ -12,7 +12,7 @@ that share one Rust crate:
 | [`packages/iroh_quic`](packages/iroh_quic) | **Pure-Dart** binding. `dart run` / CLI / server. Loads a signed prebuilt native lib (`dart run iroh_quic:setup`) or builds from source. | Linux · macOS · Windows |
 | [`packages/iroh_flutter`](packages/iroh_flutter) | **Flutter plugin**. Builds the native core into your app via cargokit; re-exports the full `iroh_quic` API. | Android · iOS · macOS · Linux · Windows |
 
-The Dart API is identical across both — `iroh_flutter` just adds the per-platform native build for
+The Dart API is identical across both. `iroh_flutter` just adds the per-platform native build for
 Flutter apps. Pick `iroh_quic` for a desktop/CLI Dart program, `iroh_flutter` for a Flutter app.
 
 ## Layout
@@ -62,4 +62,4 @@ See each package's README for details.
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE).

@@ -5,24 +5,26 @@
 .packages
 build/
 **/doc/api/
-# The single root pubspec.lock IS committed (reproducible workspace resolution); members have none.
+# Git keeps the root pubspec.lock. This makes the workspace resolution reproducible.
+# The workspace members have no pubspec.lock.
 packages/*/pubspec.lock
 
 # === Rust ===
 **/target/
-# Cargo.lock IS committed (reproducible native builds for the shipped crate).
+# Git keeps Cargo.lock. This makes the native library builds reproducible.
 
-# === flutter_rust_bridge generated (KEPT, not ignored) ===
-# packages/iroh_quic/lib/src/rust/** and rust/**/src/frb_generated.rs are committed so consumers
-# need no codegen.
+# === FRB output (Git keeps these files) ===
+# Git keeps packages/iroh_quic/lib/src/rust/** and rust/**/src/frb_generated.rs.
+# Thus users of the packages do not run the codegen.
 
 # === Vendored crate copy ===
-# packages/iroh_flutter/rust is a COMMITTED mirror of packages/iroh_quic/rust (cargokit needs the
-# crate co-located, and `dart pub publish` drops .gitignore'd files — so it must be tracked to ship
-# in the plugin archive). Keep it current with `tool/sync_native.sh`; CI verifies it's in sync. Only
-# its build output is ignored (covered by the `**/target/` rule above).
+# packages/iroh_flutter/rust is a committed mirror of packages/iroh_quic/rust.
+# cargokit needs the crate in the plugin directory.
+# `dart pub publish` does not include ignored files. Thus Git must keep the mirror.
+# Run `tool/sync_native.sh` to update the mirror. CI makes sure that the mirror is current.
+# Git ignores only the build output of the mirror (the `**/target/` rule above).
 
-# === Flutter plugin + example: generated / machine-specific / native build outputs ===
+# === Plugin and example app: generated files, local machine files, native build output ===
 **/ios/Flutter/ephemeral/
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/Flutter/Generated.xcconfig

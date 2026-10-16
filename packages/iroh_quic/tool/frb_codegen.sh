@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Regenerate the flutter_rust_bridge glue (Rust frb_generated.rs + Dart lib/src/rust/*).
-# Run after any change to rust/src/api/*. Reads flutter_rust_bridge.yaml at the repo root.
+# Generates the FRB code again: the Rust rust/src/frb_generated.rs and the Dart bindings in
+# lib/src/rust/. Run this script after each change to rust/src/api/*.
+# The FRB codegen reads flutter_rust_bridge.yaml in the package root.
 set -euo pipefail
 export PATH="$HOME/.cargo/bin:$PATH"
 

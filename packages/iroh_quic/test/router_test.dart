@@ -7,9 +7,9 @@ import 'dart:typed_data';
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// The Dart->Rust `ProtocolHandler` bridge. One iroh `Router` multiplexes two ALPNs in a single
-/// process, each handled by a **Dart async callback** that the Rust router invokes per inbound
-/// connection. Relays disabled, loopback addrs.
+/// The `ProtocolHandler` bridge from Dart to Rust. One iroh `Router` multiplexes two ALPN protocols
+/// in one process. A **Dart async callback** handles each ALPN, and the Rust router calls it for
+/// each inbound connection. Relay servers are disabled, and the client uses loopback addresses.
 void main() {
   setUpAll(() async {
     await Iroh.init();
@@ -34,7 +34,7 @@ void main() {
     final server = await Endpoint.bind(relayMode: RelayMode.disabled);
     addTearDown(server.close);
 
-    // Register two protocols, each backed by a Dart async handler.
+    // Register two ALPN protocols. A Dart async handler serves each one.
     final builder = await server.router();
     await builder.accept(upper.codeUnits, (Connection conn) async {
       final (send, recv) = await conn.acceptBi();

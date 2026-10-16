@@ -1,5 +1,5 @@
-# Strict lint + format config for the iroh_quic package. The machine-authored FRB bindings under
-# lib/src/rust/ are excluded.
+# Strict lint and format configuration for the iroh_quic package. The analyzer does not examine
+# the generated Dart bindings in lib/src/rust/.
 include: package:lints/recommended.yaml
 
 formatter:

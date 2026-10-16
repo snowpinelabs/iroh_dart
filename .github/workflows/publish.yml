@@ -1,44 +1,42 @@
 name: release
 
-# Runs on a version tag (e.g. `v1.0.0`):
-#   1. green-gate         - Rust + pure-Dart conformance tests.
-#   2. create-release     - ensure the tag's GitHub Release exists (holds the prebuilt assets).
-#   3. prebuilt (matrix)  - build the iroh_quic native cdylib for every desktop target, Ed25519-sign,
-#                           and upload `irohdart_ffi-<target>.<ext>` + `.sig` to the Release. Pure-Dart
-#                           consumers then `dart run iroh_quic:setup` to download + verify a binary.
-#   4. publish-iroh-quic  - publish packages/iroh_quic to pub.dev via dart-lang/setup-dart's reusable
-#                           publish workflow (OIDC; the pub.dev environment must have "Automated
-#                           publishing" enabled — plain `flutter/dart pub publish` only supports
-#                           interactive Google-SSO login, which can't run non-interactively in CI).
-#   verify-flutter-native-mirror - fails the release if packages/iroh_flutter/rust has drifted from
-#                           the canonical packages/iroh_quic/rust (tool/sync_native.sh output).
-#                           Runs in its own job since the publish jobs below are reusable-workflow
-#                           calls and can't carry extra steps.
-#   wait-for-pub-dev-index - brief pause so pub.dev has indexed the just-published iroh_quic before
-#                           iroh_flutter (which depends on it) tries to publish.
-#   5. publish-iroh-flutter - publish packages/iroh_flutter to pub.dev the same way, once the mirror
-#                           is verified and iroh_quic is indexed.
-#   6. github-release     - finalise the Release notes from packages/iroh_quic/CHANGELOG.md.
+# This workflow runs on a version tag, for example `v1.0.0`. It has these jobs:
+#   green-gate             - Runs the Rust tests and the pure-Dart package tests.
+#   create-release         - Makes sure that the release for the tag exists. The release
+#                            holds the prebuilt libraries.
+#   prebuilt (matrix)      - Builds the native library for each desktop target and signs it with Ed25519.
+#                            Then it attaches `irohdart_ffi-<target>.<ext>` and `.sig` to the release.
+#                            Users of the pure-Dart package run `dart run iroh_quic:setup`.
+#                            This command downloads a prebuilt library and verifies its signature.
+#   publish-iroh-quic      - Publishes packages/iroh_quic to pub.dev with OIDC.
+#                            It uses the reusable publish workflow of dart-lang/setup-dart.
+#   verify-flutter-native-mirror - Stops the release if the mirror is not equal to
+#                            packages/iroh_quic/rust (the output of tool/sync_native.sh).
+#   wait-for-pub-dev-index - Waits so that pub.dev can index the new iroh_quic version.
+#                            The plugin depends on that version.
+#   publish-iroh-flutter   - Publishes packages/iroh_flutter to pub.dev in the same way.
+#                            It starts after the mirror check and after the index wait.
+#   github-release         - Writes the release notes from packages/iroh_quic/CHANGELOG.md.
 #
-# Android/iOS ship no prebuilt (not `dart run` targets): the iroh_flutter plugin compiles the crate
-# via cargokit during the consumer's app build.
+# The workflow builds no prebuilt library for Android or iOS.
+# On these platforms, the plugin uses cargokit to compile the crate during the app build.
 #
 # Required secrets:
-#   IROHDART_SIGNING_KEY - Ed25519 signing key (hex). Public half = kPrebuiltPublicKeyHex in
-#                          packages/iroh_quic/lib/src/ffi/prebuilt.dart. The project's existing
-#                          cargokit private key works VERBATIM (128-hex seed||public); a fresh 64-hex
-#                          32-byte seed from packages/iroh_quic/tool/gen_key.dart also works.
-#   (GITHUB_TOKEN is provided automatically; needs contents:write - set below.)
-# pub.dev publishing uses OIDC: the publish jobs run in the `pub.dev` GitHub Actions environment;
-# both packages must have "Automated publishing" enabled on pub.dev for this repo + tag pattern.
+#   IROHDART_SIGNING_KEY - The Ed25519 signing key (hex).
+#                          The public key is kPrebuiltPublicKeyHex in packages/iroh_quic/lib/src/ffi/prebuilt.dart.
+#                          The key can be a cargokit private key (128 hex: seed and public key).
+#                          The key can also be a 32-byte seed (64 hex) from packages/iroh_quic/tool/gen_key.dart.
+#   GitHub gives GITHUB_TOKEN automatically. The token needs contents:write (see `permissions` below).
+# Publication to pub.dev uses OIDC. The publish jobs run in the `pub.dev` GitHub Actions environment.
+# On pub.dev, both packages must enable "Automated publishing" for this repo and tag pattern.
 
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
 
 permissions:
-  contents: write   # create the release + upload prebuilt assets
-  id-token: write   # pub.dev OIDC publishing
+  contents: write   # Create the release and attach the prebuilt libraries.
+  id-token: write   # Publish to pub.dev with OIDC.
 
 env:
   CARGO_TERM_COLOR: always
@@ -52,7 +50,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.96.0
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
-      # Resolves the workspace (flutter pub get) + cargo build/test + dart analyze/test on iroh_quic.
+      # check.sh resolves the workspace, runs cargo build and cargo test, and runs dart analyze and dart test.
       - run: ./packages/iroh_quic/tool/check.sh
 
   create-release:
@@ -79,7 +77,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Desktop cdylibs are the only assets `dart run iroh_quic:setup` downloads.
+          # `dart run iroh_quic:setup` downloads only the desktop native libraries.
           - name: macos
             os: macos-26
             ext: dylib
@@ -103,7 +101,7 @@ jobs:
       - name: Resolve workspace (for the cryptography dep used by the signer)
         run: flutter pub get
 
-      # --- Linux: zig + cargo-zigbuild for a portable glibc floor + arm64 cross ---
+      # Linux: zig and cargo-zigbuild set a minimum glibc version and compile for arm64.
       - if: matrix.name == 'linux'
         uses: mlugg/setup-zig@v2
         with: { version: 0.13.0 }
@@ -123,7 +121,8 @@ jobs:
           for t in ${{ matrix.targets }}; do
             echo "::group::build $t"
             if [ "${{ matrix.name }}" = "linux" ]; then
-              # `.2.17` pins a portable glibc floor; output still lands in target/$t/release.
+              # The `.2.17` suffix sets glibc 2.17 as the minimum version.
+              # The output stays in target/$t/release.
               cargo zigbuild --release --manifest-path "$CRATE/Cargo.toml" --target "$t.2.17"
             else
               cargo build --release --manifest-path "$CRATE/Cargo.toml" --target "$t"
@@ -138,21 +137,23 @@ jobs:
             cp "$src" "$asset"
             assets+=("$asset")
           done
-          # Emit a detached <asset>.sig next to each library, then upload library + signature.
+          # Write a detached <asset>.sig file for each library.
+          # Then attach each library and its signature to the release.
           dart run packages/iroh_quic/tool/sign_prebuilt.dart "${assets[@]}"
           uploads=()
           for a in "${assets[@]}"; do uploads+=("$a" "$a.sig"); done
           gh release upload "$tag" "${uploads[@]}" --clobber --repo "$GITHUB_REPOSITORY"
 
-  # dart-lang/setup-dart's reusable workflow provisions the pub.dev OIDC token itself (the
-  # `flutter pub publish` steps this replaced only supported interactive Google-SSO login, which
-  # can't run non-interactively in CI). It's a reusable-workflow *call* job, so it can't carry extra
-  # steps of its own — the native-crate sync is verified in a separate job below instead.
+  # The reusable workflow of dart-lang/setup-dart gets the pub.dev OIDC token.
+  # `flutter pub publish` and `dart pub publish` support only interactive Google sign-in.
+  # CI cannot do an interactive sign-in.
+  # A job that calls a reusable workflow cannot have its own steps.
+  # Thus a different job (verify-flutter-native-mirror) examines the mirror.
   publish-iroh-quic:
     name: publish iroh_quic to pub.dev
     needs: prebuilt
     permissions:
-      id-token: write   # Required for authentication using OIDC
+      id-token: write   # OIDC authentication requires this permission.
     uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1.8.1
     with:
       environment: pub.dev
@@ -168,8 +169,9 @@ jobs:
       - name: Fail if packages/iroh_flutter/rust is out of sync with packages/iroh_quic/rust
         run: git diff --exit-code -- packages/iroh_flutter/rust
 
-  # pub.dev takes a little while to index a freshly published package; iroh_flutter depends on the
-  # iroh_quic version just published above, so give it a head start before publishing.
+  # pub.dev needs some time to index a new package version.
+  # The plugin depends on the iroh_quic version that the job above published.
+  # This job gives pub.dev time to index that version before the plugin publication.
   wait-for-pub-dev-index:
     name: wait for pub.dev to index iroh_quic
     needs: publish-iroh-quic
@@ -181,7 +183,7 @@ jobs:
     name: publish iroh_flutter to pub.dev
     needs: [wait-for-pub-dev-index, verify-flutter-native-mirror]
     permissions:
-      id-token: write   # Required for authentication using OIDC
+      id-token: write   # OIDC authentication requires this permission.
     uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1.8.1
     with:
       environment: pub.dev
@@ -198,9 +200,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          tag="$GITHUB_REF_NAME"       # e.g. v1.0.0
-          version="${tag#v}"           # e.g. 1.0.0
-          # Pull the "## <version>" section body from iroh_quic's CHANGELOG (up to the next "## ").
+          tag="$GITHUB_REF_NAME"       # Example: v1.0.0
+          version="${tag#v}"           # Example: 1.0.0
+          # Get the text of the "## <version>" section from the iroh_quic CHANGELOG.
+          # The section stops at the next "## " heading.
           awk -v ver="## $version" '
             index($0, ver) == 1 { flag = 1; next }
             /^## / && flag { exit }
@@ -208,7 +211,7 @@ jobs:
           ' packages/iroh_quic/CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "Release $tag of iroh_quic + iroh_flutter." > notes.md
           echo "----- notes for $tag -----"; cat notes.md
-          # Refresh the notes on the release (created earlier, carrying the prebuilt assets).
+          # Replace the notes of the release. The create-release job made this release.
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$tag" --notes-file notes.md
           else

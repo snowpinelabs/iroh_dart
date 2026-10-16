@@ -1,20 +1,24 @@
 import 'capabilities.dart';
 import 'ffi/loader.dart';
 
-/// Top-level entrypoint for the iroh_quic binding.
+/// The main entry point of the iroh_quic binding.
 ///
-/// Call [Iroh.init] once at startup (it is idempotent) before using any other API. This loads
-/// the native `irohdart-ffi` library, verifies the ABI handshake, and prepares the embedded
-/// tokio runtime that drives iroh's async surface.
+/// Call [Iroh.init] at startup, before you use a different API. You can call it more than one
+/// time. It loads the native library and makes sure that its ABI version is correct. The crate
+/// starts its tokio runtime when the first async operation needs it.
 abstract final class Iroh {
-  /// Loads and initialises the native runtime, verifying the ABI version. Idempotent.
+  /// Loads the native library, initializes FRB, and makes sure that the ABI version is correct.
+  /// A second call has no effect.
   ///
-  /// [libraryPath] overrides library resolution (non-standard layouts); by default the loader
-  /// finds the cargo-built `libirohdart_ffi` next to `rust/target/` or in the process symbols.
+  /// [libraryPath] is the path of the native library. If it is `null`, the loader finds the native
+  /// library itself. See [IrohRuntime] for the search order.
+  /// Throws [IrohLoadException] if FRB initialization fails, or if the native library has a
+  /// different ABI version. Throws [ArgumentError] if the operating system cannot open the native
+  /// library file.
   static Future<void> init({String? libraryPath}) =>
       IrohRuntime.ensureInitialized(libraryPath: libraryPath);
 
-  /// Whether [init] has completed.
+  /// Whether [init] completed successfully.
   static bool get isInitialised => IrohRuntime.isInitialised;
 
   /// The iroh features available on this platform.

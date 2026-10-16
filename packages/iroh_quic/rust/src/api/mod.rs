@@ -1,5 +1,5 @@
-//! FRB API surface for `iroh_quic`. Each submodule maps to one Dart module under `lib/src/`
-//! and is exposed in dependency order. flutter_rust_bridge scans `crate::api`.
+//! The flutter_rust_bridge (FRB) API of `iroh_quic`. FRB reads `crate::api` and makes the Dart
+//! bindings from it. Each submodule becomes one Dart module under `lib/src/rust/api/`.
 
 pub mod address_lookup;
 pub mod connection;

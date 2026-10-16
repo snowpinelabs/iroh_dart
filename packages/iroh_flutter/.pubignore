@@ -1,10 +1,11 @@
-# Keep the published plugin archive lean + self-contained: ship the SOURCE that consumers compile
-# (android/, ios/, macos/, linux/, windows/, cargokit/, rust/src + Cargo.toml/Cargo.lock), but
-# exclude all build outputs and machine-specific junk. The rust/ crate is vendored into this package
-# by tool/sync_native.sh before publishing (its canonical source is packages/iroh_quic/rust).
+# The published plugin archive contains the source that apps compile: android/, ios/, macos/,
+# linux/, windows/, cargokit/, rust/src, Cargo.toml, and Cargo.lock.
+# The archive does not contain build output or files that are specific to one machine.
+# Before publication, tool/sync_native.sh copies the crate into rust/.
+# The source of the crate is packages/iroh_quic/rust.
 #
-# NOTE: a .pubignore fully overrides this directory's .gitignore for publishing, so every exclusion
-# we rely on must be listed HERE.
+# NOTE: For publication, a .pubignore file replaces the .gitignore file of this directory.
+# Thus, this file must list all exclusions.
 rust/target/
 **/.gradle/
 **/build/

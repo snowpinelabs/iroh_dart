@@ -1,9 +1,9 @@
-//! Endpoint lifecycle - the first async surface.
+//! The endpoint lifecycle.
 //!
-//! `Endpoint` is an **opaque** handle (it owns iroh's runtime resources - sockets, tokio tasks,
-//! relay connections). `Endpoint::builder(presets::N0)` + the rustls `CryptoProvider` (installed
-//! by the `tls-ring` feature) are hidden entirely behind [`endpoint_bind`]. Every async op runs on
-//! the shared tokio runtime (`crate::runtime::rt`).
+//! `Endpoint` is an opaque handle because it owns iroh runtime resources: sockets, tokio tasks,
+//! and relay connections. [`endpoint_bind`] hides `Endpoint::builder(presets::N0)` and the rustls
+//! crypto provider from Dart. The `tls-ring` feature supplies that crypto provider. Each async
+//! operation runs on the shared tokio runtime (`crate::runtime::rt`).
 
 use std::str::FromStr;
 
@@ -19,14 +19,16 @@ use crate::api::watch::RelayStatusInfo;
 use crate::frb_generated::StreamSink;
 use crate::runtime::rt;
 
-/// A bound iroh endpoint. Opaque handle; methods dispatch into iroh on the shared tokio runtime.
+/// A bound iroh endpoint. This type is an opaque handle. Its methods call iroh on the shared tokio
+/// runtime.
 #[frb(opaque)]
 pub struct Endpoint {
     pub(crate) inner: IrohEndpoint,
 }
 
-/// Maps the Dart-side relay-mode discriminant (+ custom URLs) onto iroh's `RelayMode`.
-/// 0 = Default, 1 = Disabled, 2 = Staging, 3 = Custom.
+/// Maps the relay mode number from Dart and the custom relay URLs to an iroh `RelayMode`.
+/// The numbers are: 0 = Default, 1 = Disabled, 2 = Staging, 3 = Custom.
+/// Returns an error for an unknown number or for a custom relay URL that is not valid.
 pub(crate) fn map_relay_mode(kind: i32, custom: Vec<String>) -> Result<RelayMode> {
     Ok(match kind {
         0 => RelayMode::Default,
@@ -43,9 +45,15 @@ pub(crate) fn map_relay_mode(kind: i32, custom: Vec<String>) -> Result<RelayMode
     })
 }
 
-/// Binds a new endpoint. Hides `presets::N0` (DNS/pkarr address lookup + relays + crypto provider);
-/// `relay_mode_kind`/`custom_relay_urls` override the relay configuration, `alpns` declares the
-/// protocols accepted for inbound connections, and `secret_key` (if given) fixes the identity.
+/// Binds a new endpoint with the `presets::N0` configuration. This preset supplies the DNS and
+/// pkarr address lookup, the relay servers, and the crypto provider.
+///
+/// `relay_mode_kind` and `custom_relay_urls` replace the relay configuration. `alpns` sets the ALPN
+/// protocols that the endpoint accepts for inbound connections. If you give `secret_key`, it sets
+/// the identity of the endpoint. If you do not give it, iroh makes a random secret key.
+///
+/// Returns an error if `relay_mode_kind` is not valid, if `secret_key` does not have 32 bytes, or
+/// if the bind fails.
 #[frb]
 pub async fn endpoint_bind(
     secret_key: Option<Vec<u8>>,
@@ -75,19 +83,21 @@ pub async fn endpoint_bind(
 }
 
 impl Endpoint {
-    /// The endpoint's [`EndpointId`](iroh::EndpointId) (public key) as 32 raw bytes.
+    /// Returns the [`EndpointId`](iroh::EndpointId) of this endpoint as 32 raw bytes. The endpoint
+    /// ID is the public key of the endpoint.
     #[frb(sync)]
     pub fn id(&self) -> Vec<u8> {
         self.inner.id().as_bytes().to_vec()
     }
 
-    /// A snapshot of this endpoint's current address (id + known relay URLs + direct IP addrs).
+    /// Returns a snapshot of the current endpoint address of this endpoint. The address contains
+    /// the endpoint ID, the known relay URLs, and the direct IP addresses.
     #[frb(sync)]
     pub fn addr(&self) -> EndpointAddrParts {
         parts_from_endpoint_addr(&self.inner.addr())
     }
 
-    /// The local socket addresses this endpoint is bound to (`host:port`).
+    /// Returns the local socket addresses of this endpoint in `host:port` form.
     #[frb(sync)]
     pub fn bound_sockets(&self) -> Vec<String> {
         self.inner
@@ -97,20 +107,23 @@ impl Endpoint {
             .collect()
     }
 
-    /// Replaces the set of accepted ALPN protocols (affects new inbound connections only).
+    /// Replaces the list of accepted ALPN protocols. The change applies only to new inbound
+    /// connections. The order sets the preference: if a peer offers more than one ALPN, the first
+    /// match in this list wins. If the endpoint is closed, iroh ignores the request.
     #[frb(sync)]
     pub fn set_alpns(&self, alpns: Vec<Vec<u8>>) {
         self.inner.set_alpns(alpns);
     }
 
-    /// Whether the endpoint has been closed.
+    /// Returns `true` if the endpoint is closed.
     #[frb(sync)]
     pub fn is_closed(&self) -> bool {
         self.inner.is_closed()
     }
 
-    /// Connects to a remote endpoint over the given ALPN protocol, returning an established
-    /// [`Connection`]. Mirrors `iroh::Endpoint::connect`.
+    /// Connects to a remote endpoint with the given ALPN protocol and returns an established
+    /// [`Connection`]. This function is the same as `iroh::Endpoint::connect`.
+    /// Returns an error if `addr` is not valid or if the connection fails.
     pub async fn connect(&self, addr: EndpointAddrParts, alpn: Vec<u8>) -> Result<Connection> {
         let target = build_endpoint_addr(&addr)?;
         let ep = self.inner.clone();
@@ -124,8 +137,11 @@ impl Endpoint {
         Ok(Connection::wrap(conn))
     }
 
-    /// Accepts the next inbound connection, collapsing the lazy `Accept -> Incoming -> Accepting ->
-    /// Connection` chain. Resolves to `None` once the endpoint is closed.
+    /// Accepts the next inbound connection and returns it after the handshake.
+    ///
+    /// This function does all the steps of the iroh chain
+    /// `Accept -> Incoming -> Accepting -> Connection`. Returns `None` after the endpoint closes.
+    /// Returns an error if the handshake fails.
     pub async fn accept(&self) -> Result<Option<Connection>> {
         let ep = self.inner.clone();
         let maybe = rt()
@@ -142,9 +158,9 @@ impl Endpoint {
         Ok(maybe)
     }
 
-    /// Accepts the next inbound connection as an unaccepted [`Incoming`], letting the caller
-    /// inspect the remote address and choose `accept`/`refuse`/`retry`/`ignore`. Resolves to
-    /// `None` once the endpoint is closed.
+    /// Waits for the next inbound connection and returns it as an [`Incoming`] that is not
+    /// accepted yet. The caller can examine the remote address and then call `accept`, `refuse`,
+    /// `retry`, or `ignore`. Returns `None` after the endpoint closes.
     pub async fn accept_incoming(&self) -> Result<Option<Incoming>> {
         let ep = self.inner.clone();
         let maybe = rt()
@@ -156,9 +172,12 @@ impl Endpoint {
         Ok(maybe.map(Incoming::wrap))
     }
 
-    /// Streams snapshots of this endpoint's [`EndpointAddr`](iroh::EndpointAddr) as relay/direct
-    /// discovery updates it. `token` lets the Dart subscription cancel the underlying task via
-    /// `cancel_stream`, which drops the iroh watcher - no leak.
+    /// Sends a snapshot of the [`EndpointAddr`](iroh::EndpointAddr) of this endpoint to `sink`
+    /// each time the address changes. The address changes when the endpoint finds relay servers or
+    /// direct addresses.
+    ///
+    /// `token` identifies the stream. The Dart subscription calls `cancel_stream` with this token.
+    /// This call stops the task and drops the iroh watcher, so no resource leak occurs.
     pub fn watch_addr(&self, token: u64, sink: StreamSink<EndpointAddrParts>) {
         let watcher = self.inner.watch_addr();
         let handle = rt().spawn(async move {
@@ -173,7 +192,11 @@ impl Endpoint {
         crate::runtime::register_stream(token, handle.abort_handle());
     }
 
-    /// Streams the home-relay connection status (one entry per configured relay) as it changes.
+    /// Sends the connection status of the home relay servers to `sink` each time it changes.
+    ///
+    /// Each update has one entry for each home relay server with a known URL. The list is empty if
+    /// no relay servers are configured, or before the endpoint selects a home relay server.
+    /// `token` identifies the stream for `cancel_stream`.
     pub fn home_relay_status(&self, token: u64, sink: StreamSink<Vec<RelayStatusInfo>>) {
         let watcher = self.inner.home_relay_status();
         let handle = rt().spawn(async move {
@@ -185,6 +208,7 @@ impl Endpoint {
                         url: s.url().to_string(),
                         connected: s.is_connected(),
                         last_error: s.last_error().map(|e| e.to_string()),
+                        auth_denied_reason: s.auth_denied_reason().map(str::to_string),
                     })
                     .collect();
                 if sink.add(mapped).is_err() {
@@ -196,10 +220,11 @@ impl Endpoint {
         crate::runtime::register_stream(token, handle.abort_handle());
     }
 
-    /// Closes the endpoint gracefully, tearing down connections and background tasks.
+    /// Closes the endpoint cleanly. This stops its connections and its background tasks.
     pub async fn close(&self) {
         let inner = self.inner.clone();
-        // JoinError only if the task panics; closing is best-effort.
+        // The task returns a `JoinError` only if it panics. The close is best-effort, so the
+        // function ignores this error.
         let _ = rt().spawn(async move { inner.close().await }).await;
     }
 }

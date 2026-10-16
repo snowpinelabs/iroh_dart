@@ -1,7 +1,7 @@
-/// Endpoint lifecycle + connections. [Endpoint.bind] is the first async surface;
-/// [Endpoint.connect] establishes a [Connection]. This library is composed from `connection.dart`
-/// and `stream.dart` (as parts) so the wrapper types can share private constructors. Call
-/// [Iroh.init] once before binding.
+/// The endpoint, connection, stream, and router types. [Endpoint.bind] makes an endpoint.
+/// [Endpoint.connect] makes a [Connection]. The files `connection.dart`, `router.dart`, and
+/// `stream.dart` are parts of this library, so the wrapper types can share private constructors.
+/// Call [Iroh.init] one time before you bind an endpoint.
 library;
 
 import 'dart:async';
@@ -31,9 +31,9 @@ EndpointAddr _addrFromParts(ffi_key.EndpointAddrParts parts) => EndpointAddr(
 
 int _streamTokenCounter = 0;
 
-/// Wraps an FRB reactive stream (which blocks a Rust task that cannot otherwise observe Dart
-/// cancellation) so that cancelling the returned subscription aborts the Rust task via
-/// `cancelStream(token)` - making cancel prompt and leak-free.
+/// Wraps an FRB stream. The Rust task behind the stream cannot see a Dart cancel by itself.
+/// When you cancel the returned subscription, this wrapper calls `cancelStream` with the token.
+/// The crate then stops the Rust task immediately, and no resources stay in use.
 Stream<R> _cancellableStream<T, R>(
   Stream<T> Function(BigInt token) create,
   R Function(T value) convert,
@@ -57,18 +57,19 @@ Stream<R> _cancellableStream<T, R>(
   return controller.stream;
 }
 
-/// A bound iroh endpoint - the local participant in the P2P network. Holds native runtime
-/// resources (sockets, tokio tasks, relay connections); call [close] to release them.
+/// A bound iroh endpoint. It is the local participant in the P2P network. It holds native
+/// resources: sockets, tokio tasks, and relay server connections. Call [close] to release them.
 final class Endpoint {
   Endpoint._(this._inner);
 
   final ffi_ep.Endpoint _inner;
 
-  /// Binds a new endpoint and returns once it is ready to connect/accept.
+  /// Binds a new endpoint. Returns the endpoint when it is ready to connect and accept.
   ///
-  /// [secretKey] fixes the identity (a fresh random key is generated if omitted). [alpns] are the
-  /// application protocols accepted for inbound connections. [relayMode] selects relay servers
-  /// (defaults to n0's production relays). Throws [IrohBindException] on failure.
+  /// [secretKey] sets the identity. If it is `null`, the endpoint makes a new random key.
+  /// [alpns] are the ALPN protocols that the endpoint accepts for incoming connections.
+  /// [relayMode] selects the relay servers. The default is the n0 production relay servers.
+  /// Throws [IrohBindException] on failure.
   static Future<Endpoint> bind({
     SecretKey? secretKey,
     List<List<int>> alpns = const <List<int>>[],
@@ -88,10 +89,11 @@ final class Endpoint {
     }
   }
 
-  /// Binds an endpoint that resolves peer addresses via a **Dart-implemented** [resolve] callback
-  /// instead of iroh's built-in DNS/pkarr lookup. When you `connect` to a peer
-  /// known only by its [EndpointId], [resolve] is invoked to discover its [EndpointAddr]; return
-  /// `null` for unknown ids. Throws [IrohBindException] on failure.
+  /// Binds an endpoint that uses a **Dart** [resolve] callback for address lookup. This callback
+  /// replaces the iroh DNS/pkarr address lookup. If you `connect` to a peer with only its
+  /// [EndpointId], the endpoint calls [resolve] to find its [EndpointAddr]. Return `null` for an
+  /// unknown endpoint ID. [secretKey], [alpns], and [relayMode] have the same function as in
+  /// [bind]. Throws [IrohBindException] on failure.
   static Future<Endpoint> bindWithAddressLookup({
     required FutureOr<EndpointAddr?> Function(EndpointId endpointId) resolve,
     SecretKey? secretKey,
@@ -121,38 +123,50 @@ final class Endpoint {
     }
   }
 
-  /// This endpoint's [EndpointId] (public key).
+  /// The [EndpointId] (public key) of this endpoint.
   EndpointId get id => PublicKey.fromBytes(_inner.id());
 
-  /// A snapshot of this endpoint's current address (id + known relay URLs + direct IP addrs).
-  /// The relay/direct lists may be empty immediately after [bind] until discovery populates them.
+  /// The current endpoint address of this endpoint: the endpoint ID, the known relay URLs, and the
+  /// direct IP addresses. Immediately after [bind], the relay and IP lists can be empty. The
+  /// endpoint adds entries when it finds its addresses.
   EndpointAddr get addr => _addrFromParts(_inner.addr());
 
-  /// A live [Stream] of this endpoint's [EndpointAddr] as relay/direct discovery updates it.
-  /// Cancelling the subscription drops the iroh watcher.
+  /// Returns a [Stream] that sends the [EndpointAddr] of this endpoint each time it changes.
+  /// When you cancel the subscription, the crate stops the iroh watcher.
   Stream<EndpointAddr> watchAddr() =>
       _cancellableStream((token) => _inner.watchAddr(token: token), _addrFromParts);
 
-  /// A live [Stream] of the home-relay connection status (one [RelayStatus] per configured relay).
+  /// Returns a [Stream] of the connection status of the home relay servers. Each event has one
+  /// [RelayStatus] for each configured relay server. When you cancel the subscription, the crate
+  /// stops the iroh watcher.
   Stream<List<RelayStatus>> homeRelayStatus() => _cancellableStream(
     (token) => _inner.homeRelayStatus(token: token),
     (list) => list
-        .map((s) => RelayStatus(url: s.url, connected: s.connected, lastError: s.lastError))
+        .map(
+          (s) => RelayStatus(
+            url: s.url,
+            connected: s.connected,
+            lastError: s.lastError,
+            authDeniedReason: s.authDeniedReason,
+          ),
+        )
         .toList(),
   );
 
   /// The local socket addresses (`host:port`) this endpoint is bound to.
   List<String> get boundSockets => _inner.boundSockets();
 
-  /// Whether the endpoint has been closed.
+  /// Whether the endpoint is closed.
   bool get isClosed => _inner.isClosed();
 
-  /// Replaces the accepted ALPN protocols (affects new inbound connections only).
+  /// Replaces the ALPN protocols that the endpoint accepts. This change applies only to new
+  /// incoming connections. The order of [alpns] sets the preference. If a peer offers more than
+  /// one ALPN, the endpoint selects the first match in [alpns].
   void setAlpns(List<List<int>> alpns) =>
       _inner.setAlpns(alpns: alpns.map(Uint8List.fromList).toList());
 
-  /// Connects to [addr] over the [alpn] protocol, returning an established [Connection].
-  /// Throws [IrohConnectException] if the connection cannot be established.
+  /// Connects to the endpoint at [addr] with the ALPN protocol [alpn], and returns the
+  /// [Connection]. Throws [IrohConnectException] if the connection fails.
   Future<Connection> connect(EndpointAddr addr, List<int> alpn) async {
     final parts = ffi_key.EndpointAddrParts(
       id: addr.id.asBytes(),
@@ -167,8 +181,9 @@ final class Endpoint {
     }
   }
 
-  /// Accepts the next inbound [Connection], or `null` once the endpoint is closed. Collapses
-  /// iroh's lazy two-step accept. Throws [IrohAcceptException] on failure.
+  /// Accepts the next incoming [Connection]. Returns `null` when the endpoint is closed. iroh
+  /// accepts a connection in two steps. This method does the two steps in one call.
+  /// Throws [IrohAcceptException] on failure.
   Future<Connection?> accept() async {
     try {
       final inner = await _inner.accept();
@@ -178,8 +193,8 @@ final class Endpoint {
     }
   }
 
-  /// Accepts the next inbound connection as an unaccepted [Incoming], letting you inspect the
-  /// remote address and choose `accept`/`refuse`/`retry`/`ignore`. Returns `null` once
+  /// Returns the next incoming connection as an [Incoming] that is not accepted yet. You can read
+  /// the remote address, then call `accept`, `refuse`, `retry`, or `ignore`. Returns `null` when
   /// the endpoint is closed. Throws [IrohAcceptException] on failure.
   Future<Incoming?> acceptIncoming() async {
     try {
@@ -190,13 +205,13 @@ final class Endpoint {
     }
   }
 
-  /// Begins building a multi-protocol [Router] over this endpoint. Register one Dart
-  /// handler per ALPN, then `spawn()`. Use this for in-process multiplexing of several protocols;
-  /// for the simple single-protocol case prefer the [accept] loop.
+  /// Returns a [RouterBuilder] that makes a multi-protocol [Router] for this endpoint. Register
+  /// one Dart handler for each ALPN, then call `spawn()`. Use a router to serve more than one
+  /// protocol in one process. For one protocol, use an [accept] loop.
   Future<RouterBuilder> router() async =>
       RouterBuilder._(await ffi_router.routerBuilder(endpoint: _inner));
 
-  /// Closes the endpoint gracefully, tearing down connections and background tasks.
+  /// Closes the endpoint gracefully. This stops its connections and its background tasks.
   Future<void> close() => _inner.close();
 }
 

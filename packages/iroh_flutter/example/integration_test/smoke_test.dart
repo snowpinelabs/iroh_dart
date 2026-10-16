@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:iroh_flutter/iroh_flutter.dart';
 
-/// On-device (simulator/emulator) verification - runs against the REAL native
-/// build: cargokit compiles the Rust crate, the platform links it, and the Dart loader resolves
-/// the FFI symbols at runtime. This is the proof the host `flutter test` can't give.
+/// On-device tests (simulator or emulator) for the REAL native build. cargokit compiles the crate,
+/// the platform links it, and the Dart loader finds the FFI symbols at run time. A host
+/// `flutter test` run cannot test this path.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -24,7 +24,7 @@ void main() {
 
   testWidgets('native library loads and ABI handshake passes', (tester) async {
     await Iroh.init();
-    expect(Iroh.abiVersion, 1);
+    expect(Iroh.abiVersion, 2);
     expect(Iroh.irohVersion, isNotEmpty);
     expect(Iroh.capabilities.direct, isTrue);
   });
@@ -75,7 +75,7 @@ void main() {
     final ep = await Endpoint.bind(relayMode: RelayMode.disabled);
     final first = await ep.watchAddr().first;
     expect(first.id, ep.id);
-    // Repeated subscribe/cancel must not deadlock the native callback bridge.
+    // Many subscribe and cancel cycles must not cause a deadlock in the native stream bridge.
     for (var i = 0; i < 10; i++) {
       final sub = ep.watchAddr().listen((_) {});
       await Future<void>.delayed(const Duration(milliseconds: 2));

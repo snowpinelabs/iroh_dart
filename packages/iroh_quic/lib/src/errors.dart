@@ -1,84 +1,86 @@
-/// Structured exception hierarchy for `iroh_quic`.
+/// The exception hierarchy for `iroh_quic`.
 ///
-/// iroh surfaces `n0_error` enums (`BindError`, `ConnectError`, `AcceptError`,
-/// `ConnectionError`, plus noq stream errors). We map them onto this hierarchy rather than
-/// flattening to strings, so callers can branch on the retry / refuse / 0-RTT-rejected
-/// distinctions that matter for connection logic.
+/// Each wrapper method that can fail throws a subtype of [IrohException]. The subtype tells which
+/// operation failed: load, key, bind, connect, accept, connection, or stream. The message contains
+/// the text of the Rust error.
 ///
-/// Every wrapper method that can fail throws a subtype of [IrohException]; FRB-reported Rust
-/// errors are converted at the wrapper boundary, never leaked as raw generated types.
+/// The wrapper methods convert each Rust error from FRB into an [IrohException]. They do not
+/// throw the generated FRB error types.
 library;
 
 /// Base class for every error raised by the iroh_quic binding.
 sealed class IrohException implements Exception {
   const IrohException(this.message, {this.cause});
 
-  /// Human-readable description (forwarded from the underlying iroh error where available).
+  /// A description of the error. If the error comes from iroh, this is the text of the iroh error.
   final String message;
 
-  /// The originating error, when this exception wraps a lower-level cause.
+  /// The original error, if this exception wraps an error from a lower layer.
   final Object? cause;
 
-  /// Short, stable tag used in [toString]; subclasses override.
+  /// A short tag for the error type. [toString] shows it. Each subclass gives its own tag.
   String get kind;
 
   @override
   String toString() => 'IrohException($kind): $message${cause == null ? '' : ' (cause: $cause)'}';
 }
 
-/// The native library could not be loaded, or its ABI version does not match what this Dart
-/// package was generated against (refuse-on-mismatch handshake).
+/// The native library did not load, or its ABI version is not the ABI version of the Dart
+/// bindings. The loader refuses a native library with a different ABI version.
 final class IrohLoadException extends IrohException {
   const IrohLoadException(super.message, {super.cause});
   @override
   String get kind => 'load';
 }
 
-/// A key/address could not be parsed or is malformed (identity & addressing).
+/// A key, endpoint ID, endpoint address, or relay URL is not valid.
 final class IrohKeyException extends IrohException {
   const IrohKeyException(super.message, {super.cause});
   @override
   String get kind => 'key';
 }
 
-/// `Endpoint.bind` failed (sockets, QUIC endpoint, crypto provider, TLS config).
+/// An endpoint did not bind. The cause can be the sockets, the QUIC endpoint, the crypto provider,
+/// or the TLS configuration.
 final class IrohBindException extends IrohException {
   const IrohBindException(super.message, {super.cause});
   @override
   String get kind => 'bind';
 }
 
-/// `endpoint.connect` failed before a [Connection] was established.
+/// `Endpoint.connect` failed before the [Connection] was ready.
 final class IrohConnectException extends IrohException {
   const IrohConnectException(super.message, {super.cause});
   @override
   String get kind => 'connect';
 }
 
-/// An inbound connection could not be accepted (accept loop).
+/// An accept operation failed. Examples are [Endpoint.accept], [Incoming.accept], and the
+/// registration or the start of a [Router].
 final class IrohAcceptException extends IrohException {
   const IrohAcceptException(super.message, {super.cause});
   @override
   String get kind => 'accept';
 }
 
-/// An established connection failed or was closed unexpectedly.
+/// An operation on an open connection failed, or the connection closed unexpectedly.
+/// [Router.shutdown] also throws this exception.
 final class IrohConnectionException extends IrohException {
   const IrohConnectionException(super.message, {super.cause});
   @override
   String get kind => 'connection';
 }
 
-/// A stream read/write/finish/stop operation failed (noq SendStream/RecvStream).
+/// An operation on a send stream or a receive stream failed (read, write, finish, reset, or stop).
 final class IrohStreamException extends IrohException {
   const IrohStreamException(super.message, {super.cause});
   @override
   String get kind => 'stream';
 }
 
-/// The operation is not supported in the current capability set - e.g. iroh-blobs, which is not
-/// wrapped in v1. Distinct from [UnsupportedError] so callers can catch it within the
-/// [IrohException] hierarchy.
+/// The current capability set does not support the operation. For example, this package does not
+/// wrap iroh-blobs. This class is different from [UnsupportedError], so callers can catch it as an
+/// [IrohException].
 final class IrohUnsupportedException extends IrohException {
   const IrohUnsupportedException(super.message, {super.cause});
   @override

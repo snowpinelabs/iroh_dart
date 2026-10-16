@@ -1,6 +1,6 @@
-// Tests for the prebuilt-binary distribution path: target mapping, the Ed25519 sign->verify
-// round-trip used by bin/setup.dart + tool/sign_prebuilt.dart, and the loader resolving a library
-// installed only in the per-user cache (IROHDART_CACHE_DIR), with no rust/target fallback in reach.
+// Tests for the distribution of the prebuilt library. They cover the target map and the Ed25519
+// sign and verify cycle that bin/setup.dart and tool/sign_prebuilt.dart use. They also make sure
+// that the loader finds a library that is only in the cache (IROHDART_CACHE_DIR).
 
 import 'dart:ffi' show Abi;
 import 'dart:io';
@@ -14,7 +14,8 @@ void main() {
   group('prebuilt target mapping', () {
     test('current host has a prebuilt target with a triple-tagged asset name', () {
       final target = currentPrebuiltTarget();
-      // CI + dev run on desktop x64/arm64, all of which have prebuilts.
+      // CI and development machines are desktop x64 or arm64 hosts.
+      // All of these hosts have a prebuilt library.
       expect(target, isNotNull, reason: 'no prebuilt mapping for ${Abi.current()}');
       expect(target!.assetName, startsWith('irohdart_ffi-${target.triple}.'));
       expect(target.signatureAssetName, '${target.assetName}.sig');
@@ -62,8 +63,9 @@ void main() {
   group('loader resolves a library installed only in the cache', () {
     test('Iroh.init() loads from IROHDART_CACHE_DIR with no rust/target in reach', () async {
       final target = currentPrebuiltTarget()!;
-      // The host library built by tool/check.sh (`cargo build` => debug). Prefer debug (the gate's
-      // fresh artifact); fall back to release. Skip if neither is present.
+      // Use the host library from tool/check.sh, which runs `cargo build` (debug). Use the debug
+      // library first, because check.sh builds it. If it is not there, use the release library.
+      // If neither library is there, skip the test.
       File? built;
       for (final f in [
         File('rust/target/debug/${target.libFileName}'),
@@ -82,14 +84,15 @@ void main() {
       final tmp = Directory.systemTemp.createTempSync('iroh_cache_test_');
       addTearDown(() => tmp.deleteSync(recursive: true));
 
-      // Lay the library out exactly where setup.dart would, under a fake cache root.
+      // Put the library at the same path that setup.dart uses, below a temporary cache root.
       final cacheRoot = '${tmp.path}/cache';
       final installDir = Directory('$cacheRoot/iroh_quic/v$kIrohdartLibVersion/${target.triple}');
       installDir.createSync(recursive: true);
       built.copySync('${installDir.path}/${target.libFileName}');
 
-      // Run from a cwd with no rust/ tree, so only the cache path can satisfy the loader.
-      // In a pub workspace the package_config lives at the workspace root, so walk up to find it.
+      // Run the probe from a directory without a rust/ tree. Thus, the loader can find the library
+      // only in the cache. In a pub workspace, package_config.json is at the workspace root.
+      // Thus, search the parent directories for it.
       final pkgConfig = _findPackageConfig();
       final probe = File('${tmp.path}/probe.dart')
         ..writeAsStringSync('''
@@ -113,8 +116,9 @@ Future<void> main() async {
   });
 }
 
-/// Find `.dart_tool/package_config.json` by walking up from the current directory — it sits in the
-/// package dir for a standalone package and at the root for a pub-workspace member.
+/// Finds `.dart_tool/package_config.json` in the current directory or in a parent directory.
+/// A standalone package has this file in its package directory. A member of a pub workspace uses
+/// the file at the workspace root.
 String _findPackageConfig() {
   var dir = Directory.current;
   while (true) {

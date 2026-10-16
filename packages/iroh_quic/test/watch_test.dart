@@ -7,9 +7,9 @@ import 'dart:typed_data';
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// Reactive state bridged to Dart `Stream`s. Verifies streams emit, that cancellation is leak-free
-/// under repeated subscribe/cancel (the host proxy for the on-device `NativeCallable.listener` load
-/// test), and that path events surface on a real connection.
+/// Reactive state as Dart `Stream`s. The tests make sure that the streams emit values. They also
+/// make sure that many subscribe and cancel cycles do not cause a leak. Last, they make sure that
+/// path events occur on a real connection.
 void main() {
   setUpAll(() async {
     await Iroh.init();
@@ -51,7 +51,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 2));
       await sub.cancel();
     }
-    // Reaching here without hanging means each StreamSink set up and tore down cleanly.
+    // If the loop completes without a hang, each StreamSink started and stopped correctly.
     expect(ep.isClosed, isFalse);
   });
 
@@ -80,7 +80,7 @@ void main() {
     await recv.readToEnd(1 << 16);
     await served;
 
-    // Give the path machinery a moment to publish events, then stop listening.
+    // Wait 2 seconds so that iroh can publish path events. Then cancel the subscription.
     await Future<void>.delayed(const Duration(seconds: 2));
     await sub.cancel();
 

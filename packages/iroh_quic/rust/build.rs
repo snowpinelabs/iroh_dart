@@ -1,6 +1,7 @@
-//! Captures the resolved `iroh` version from Cargo.lock at build time and exposes it as the
-//! `IROH_CRATE_VERSION` compile-time env var, so `irohdart_iroh_version()` can report the actual
-//! iroh version rather than this wrapper crate's own version.
+//! Reads the resolved `iroh` version from `Cargo.lock` at build time.
+//! The build script gives this version to the compiler as the `IROH_CRATE_VERSION` environment
+//! variable. Thus `irohdart_iroh_version()` reports the real iroh version, not the version of this
+//! crate.
 
 use std::path::Path;
 
@@ -12,13 +13,14 @@ fn main() {
     let version = std::fs::read_to_string(&lock_path)
         .ok()
         .and_then(|lock| iroh_version_from_lock(&lock))
-        // Fall back to the major version we pin in Cargo.toml if the lockfile can't be read.
-        .unwrap_or_else(|| "1.0".to_string());
+        // If the build script cannot read the lockfile, it uses the fixed value "1.3".
+        .unwrap_or_else(|| "1.3".to_string());
 
     println!("cargo:rustc-env=IROH_CRATE_VERSION={version}");
 }
 
-/// Finds the `version` of the `[[package]]` entry named `iroh` in a Cargo.lock file.
+/// Finds the `version` of the `[[package]]` entry named `iroh` in a `Cargo.lock` file.
+/// Returns `None` if the file has no such entry.
 fn iroh_version_from_lock(lock: &str) -> Option<String> {
     let mut in_iroh = false;
     for line in lock.lines() {

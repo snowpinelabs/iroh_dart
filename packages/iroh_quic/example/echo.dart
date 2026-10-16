@@ -1,16 +1,17 @@
-// Pure-Dart headless smoke test (migration P0): proves iroh_quic runs under
-// `dart run` with no Flutter — bind two endpoints, dial one from the other over
-// QUIC, and echo a bidirectional stream.
+// A pure-Dart smoke test with no UI. It shows that iroh_quic runs under `dart run` without
+// Flutter. It binds two endpoints and connects one to the other over QUIC. The server endpoint
+// returns the data that the client writes to a bidirectional stream.
 //
-// Run from the package root after `cargo build --release`:
+// Run `dart run iroh_quic:setup` or `cargo build --release` first. Then run this command from
+// the package root:
 //   dart run example/echo.dart
 import 'dart:typed_data';
 
 import 'package:iroh_quic/iroh_quic.dart';
 
 Future<void> main() async {
-  // No libraryPath: the loader's per-platform disk fallback finds
-  // rust/target/{debug,release}/libirohdart_ffi.{so,dylib,dll} automatically.
+  // No libraryPath. The loader finds the native library automatically, for example in
+  // rust/target/{debug,release}/ or in the cache.
   await Iroh.init();
   print('iroh ${Iroh.irohVersion}, ABI v${Iroh.abiVersion}');
 

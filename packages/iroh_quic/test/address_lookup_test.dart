@@ -7,9 +7,9 @@ import 'dart:typed_data';
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// The Dart->Rust custom `AddressLookup` bridge. A client dials a server known only by its
-/// [EndpointId]; iroh calls back into a **Dart** resolver to discover the server's address, then
-/// connects. Relays disabled; the resolver returns loopback addresses.
+/// The custom `AddressLookup` bridge from Dart to Rust. A client connects to a server from its
+/// [EndpointId] only. iroh calls a **Dart** resolver to find the address of the server, and then
+/// connects. Relay servers are disabled, and the resolver gives loopback addresses.
 void main() {
   setUpAll(() async {
     await Iroh.init();
@@ -40,7 +40,7 @@ void main() {
       relayMode: RelayMode.disabled,
       resolve: (EndpointId id) {
         resolverCalls++;
-        // Resolve only the known server; everything else is unknown.
+        // Resolve only the known server. All other endpoint IDs are unknown.
         if (id == serverId) {
           return EndpointAddr(serverId, ipAddrs: serverAddrs);
         }
@@ -49,7 +49,7 @@ void main() {
     );
     addTearDown(client.close);
 
-    // Server echoes one bidi stream.
+    // The server echoes one bidirectional stream.
     final served = () async {
       final conn = await server.accept();
       final (send, recv) = await conn!.acceptBi();
@@ -58,8 +58,8 @@ void main() {
       await send.finish();
     }();
 
-    // Connect using ONLY the server's id - no direct addresses provided. iroh must call the Dart
-    // resolver to discover the address.
+    // Connect with ONLY the endpoint ID of the server, without direct addresses. iroh must call
+    // the Dart resolver to find the address.
     final payload = Uint8List.fromList('resolved-by-dart'.codeUnits);
     final conn = await client.connect(EndpointAddr(serverId), alpn.codeUnits);
     final (send, recv) = await conn.openBi();

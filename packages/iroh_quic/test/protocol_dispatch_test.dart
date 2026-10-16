@@ -7,9 +7,9 @@ import 'dart:typed_data';
 import 'package:iroh_quic/iroh_quic.dart';
 import 'package:test/test.dart';
 
-/// Multi-protocol multiplexing by **dispatching on ALPN in Dart** over the accept loop - an
-/// alternative to bridging async Rust traits. One server advertises two ALPNs and routes each
-/// accepted connection to a different handler.
+/// More than one protocol on one endpoint, with an **ALPN dispatch in Dart** on the accept loop.
+/// This is an alternative to a bridge for async Rust traits. One server advertises two ALPN protocols and
+/// sends each accepted connection to a different handler.
 void main() {
   setUpAll(() async {
     await Iroh.init();
@@ -38,7 +38,7 @@ void main() {
     addTearDown(server.close);
     final serverAddr = EndpointAddr(server.id, ipAddrs: loopback(server.boundSockets));
 
-    // Accept loop: dispatch on the negotiated ALPN.
+    // Accept loop: select the handler from the negotiated ALPN.
     final serverDone = () async {
       final handlers = <Future<void>>[];
       for (var i = 0; i < 2; i++) {

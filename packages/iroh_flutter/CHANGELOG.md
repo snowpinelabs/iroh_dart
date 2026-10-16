@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- Builds the native core against iroh 1.3.0 and exposes its new APIs (batch datagrams,
+  `RelayStatus.authDeniedReason`); see the `iroh_quic` changelog. ABI version 2.
+- `flutter_lints` ^6.0.0. The analysis options now exclude `build/` and the platform folders,
+  so Flutter 3.47+ no longer rewrites them on `pub get`.
+
 ## 1.0.3
 
 - **Windows/Linux:** fix the CMake generate failure `No target "iroh_flutter_plugin"` when
@@ -22,5 +29,5 @@ Initial release of the `iroh_flutter` plugin (the Flutter half of the `iroh_dart
 - Flutter FFI plugin building the iroh 1.0 Rust core (`irohdart_ffi`) into the app via cargokit on
   Android, iOS, macOS, Linux, and Windows.
 - Re-exports the full [`iroh_quic`](https://pub.dev/packages/iroh_quic) API; `Iroh.init()` loads the
-  bundled native library — no `setup` step on Flutter.
+  bundled native library (no `setup` step on Flutter).
 - Android NDK r28+ (16 KB page alignment); iOS 13+ / macOS 11+; `-force_load` staticlib on Apple.

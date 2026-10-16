@@ -1,10 +1,10 @@
 name: ci
 
-# CI for the iroh_dart monorepo (packages/iroh_quic + packages/iroh_flutter).
-# - green-gate: Rust + pure-Dart conformance tests for iroh_quic.
-# - flutter-analyze: resolves the whole workspace and analyzes the Flutter plugin + example.
-# - cross-compile: proves the owned `irohdart_ffi` crate builds for every native target family.
-# The prebuilt-binary release + pub.dev publishing live in release.yml (runs on v* tags).
+# CI for the iroh_dart monorepo (packages/iroh_quic and packages/iroh_flutter).
+# - green-gate: runs the Rust tests and the pure-Dart package tests.
+# - flutter-analyze: resolves the workspace and analyzes the plugin and its example app.
+# - cross-compile: makes sure that the crate builds for each native target family.
+# The workflow publish.yml builds the prebuilt libraries and publishes to pub.dev on version tags.
 
 on:
   push:
@@ -24,9 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.96.0
-      # iroh_quic is Flutter-free, but it shares a pub workspace with iroh_flutter, so resolving the
-      # workspace needs Flutter (which bundles Dart). check.sh runs `flutter pub get` at the root,
-      # then cargo build/test + `dart analyze`/`dart test` on the pure-Dart package.
+      # The pure-Dart package does not use Flutter. But it is in the same workspace as the plugin.
+      # Thus the workspace resolution needs Flutter, which also contains Dart.
+      # check.sh runs `flutter pub get` at the root, then cargo build and cargo test.
+      # Then it runs `dart analyze` and `dart test` on the pure-Dart package.
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
       - name: Run checks (cargo build/test + dart analyze/test)
@@ -39,8 +40,8 @@ jobs:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
-      # The plugin's vendored crate (packages/iroh_flutter/rust) is a committed mirror of
-      # packages/iroh_quic/rust. Re-sync and fail if it drifted from the canonical source.
+      # The vendored crate (packages/iroh_flutter/rust) is a committed mirror of packages/iroh_quic/rust.
+      # Sync the mirror again. Stop the job with an error if the mirror is not equal to the source.
       - run: bash tool/sync_native.sh
       - name: Verify vendored crate is in sync
         run: |
@@ -96,14 +97,14 @@ jobs:
         if: matrix.name == 'android'
         shell: bash
         run: |
-          # NDK r28+ is required for the 16KB page-alignment Google Play requirement.
+          # Google Play requires 16KB page alignment. Only NDK r28 and later give this alignment.
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o ./jniLibs build --release
-          # Verify 16KB-aligned LOAD segments on arm64.
+          # Examine the alignment of the LOAD segments in the arm64 native library.
           SO=$(find ./jniLibs/arm64-v8a -name 'libirohdart_ffi.so' | head -1)
           if command -v llvm-readelf >/dev/null; then READELF=llvm-readelf; else READELF=readelf; fi
           echo "Checking LOAD alignment of $SO"
           "$READELF" -l "$SO" | awk '/LOAD/ { print "align:", $NF }'
-          # Fail if any LOAD segment is aligned below 2**14 (16KB).
+          # Show a warning if a LOAD segment has an alignment below 2**14 (16KB).
           if "$READELF" -l "$SO" | grep -qE '0x(1000|2000|4000|8000)$' && \
              ! "$READELF" -l "$SO" | grep -qE '0x4000$|0x10000$'; then
             echo "::warning::verify 16KB alignment manually (NDK r28+ aligns to 0x4000)"

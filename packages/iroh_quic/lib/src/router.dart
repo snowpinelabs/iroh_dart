@@ -1,15 +1,16 @@
 part of 'endpoint.dart';
 
-/// Builds a multi-protocol [Router]. Register one Dart handler per ALPN with
-/// [accept], then [spawn]. Each registration is a Dart->Rust async-trait bridge: iroh's `Router`
-/// runs the accept loop and invokes your callback for every inbound [Connection] on that ALPN.
+/// Makes a multi-protocol [Router]. Call [accept] to register one Dart handler for each ALPN, then
+/// call [spawn]. The iroh `Router` runs the accept loop in Rust. It calls your Dart handler for
+/// each incoming [Connection] on the ALPN of that handler.
 final class RouterBuilder {
   RouterBuilder._(this._inner);
 
   final ffi_router.RouterBuilder _inner;
 
-  /// Registers [onAccept] as the handler for connections negotiating [alpn]. The callback receives
-  /// each accepted [Connection] and should complete once it has finished handling it.
+  /// Registers [onAccept] as the handler for connections that use the ALPN protocol [alpn]. The
+  /// router gives each accepted [Connection] to [onAccept]. Complete the callback when the work on
+  /// that connection is done. Throws [IrohAcceptException] on failure.
   Future<void> accept(
     List<int> alpn,
     FutureOr<void> Function(Connection connection) onAccept,
@@ -24,7 +25,8 @@ final class RouterBuilder {
     }
   }
 
-  /// Spawns the router's accept loop and returns the running [Router].
+  /// Starts the accept loop of the router and returns the [Router].
+  /// Throws [IrohAcceptException] on failure.
   Future<Router> spawn() async {
     try {
       return Router._(await _inner.spawn());
@@ -34,15 +36,16 @@ final class RouterBuilder {
   }
 }
 
-/// A running multi-protocol router. Dispatches inbound connections to the Dart handler
-/// registered for each ALPN. The router aborts when this object is garbage-collected; call
-/// [shutdown] to stop it cleanly.
+/// A multi-protocol router that runs. It sends each incoming connection to the Dart handler that
+/// you registered for its ALPN. When the garbage collector removes this object, the router stops
+/// abruptly. Call [shutdown] to stop it gracefully.
 final class Router {
   Router._(this._inner);
 
   final ffi_router.Router _inner;
 
-  /// Shuts the router down gracefully (stops accepting and closes connections).
+  /// Stops the router gracefully. The router stops the accept loop and closes its connections.
+  /// Throws [IrohConnectionException] on failure.
   Future<void> shutdown() async {
     try {
       await _inner.shutdown();
