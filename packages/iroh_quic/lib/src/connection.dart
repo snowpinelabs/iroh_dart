@@ -59,6 +59,27 @@ final class Connection {
   /// Receives the next application datagram.
   Future<Uint8List> readDatagram() => _connWrap(() => _inner.readDatagram());
 
+  /// Sends a batch of unreliable, unordered datagrams in one call, and returns the number that
+  /// iroh queued. This has less overhead than one [sendDatagram] call for each datagram. If one
+  /// datagram is too large, iroh rejects the full batch with an [IrohConnectionException].
+  int sendManyDatagrams(List<List<int>> datagrams) {
+    try {
+      return _inner
+          .sendManyDatagrams(datagrams: datagrams.map(Uint8List.fromList).toList())
+          .toInt();
+    } on AnyhowException catch (e) {
+      throw IrohConnectionException(e.message, cause: e);
+    }
+  }
+
+  /// Receives a batch of application datagrams, in arrival order. Waits until at least one
+  /// datagram is available, then returns at most [maxCount] datagrams. If [maxCount] is zero,
+  /// returns an empty list immediately.
+  Future<List<Uint8List>> readManyDatagrams({int maxCount = 64}) {
+    RangeError.checkNotNegative(maxCount, 'maxCount');
+    return _connWrap(() => _inner.readManyDatagrams(maxCount: BigInt.from(maxCount)));
+  }
+
   /// Resolves when the connection closes, with the human-readable close reason.
   Future<String> closed() => _inner.closed();
 

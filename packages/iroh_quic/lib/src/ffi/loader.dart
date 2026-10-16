@@ -11,7 +11,7 @@ import 'prebuilt.dart';
 /// `IROHDART_ABI_VERSION` in `rust/src/api/simple.rs`. A mismatch means a stale
 /// prebuilt native library is loaded against newer Dart bindings (or vice-versa) - we refuse to
 /// run rather than crash later (ABI-handshake convention).
-const int kIrohdartExpectedAbiVersion = 1;
+const int kIrohdartExpectedAbiVersion = 2;
 
 /// Loads and initialises the `irohdart-ffi` native library exactly once.
 ///

@@ -239,6 +239,33 @@ impl Connection {
         Ok(data.to_vec())
     }
 
+    /// Sends a batch of unreliable, unordered datagrams in one call. Returns the number of
+    /// datagrams that iroh queued. If one datagram is too large, iroh rejects the full batch.
+    #[frb(sync)]
+    pub fn send_many_datagrams(&self, datagrams: Vec<Vec<u8>>) -> Result<usize> {
+        let batch: Vec<bytes::Bytes> = datagrams.into_iter().map(bytes::Bytes::from).collect();
+        self.inner
+            .send_many_datagrams(&batch)
+            .map_err(anyhow::Error::new)
+    }
+
+    /// Receives a batch of application datagrams from the peer, in arrival order. Waits until
+    /// at least one datagram is available, then returns at most `max_count` datagrams. If
+    /// `max_count` is zero, returns an empty list immediately.
+    pub async fn read_many_datagrams(&self, max_count: usize) -> Result<Vec<Vec<u8>>> {
+        let conn = self.inner.clone();
+        rt().spawn(async move {
+            let mut out = vec![bytes::Bytes::new(); max_count];
+            let n = conn
+                .read_many_datagrams(&mut out)
+                .await
+                .map_err(anyhow::Error::new)?;
+            Ok::<Vec<Vec<u8>>, anyhow::Error>(out[..n].iter().map(|d| d.to_vec()).collect())
+        })
+        .await
+        .map_err(|e| anyhow!("read_many_datagrams task panicked: {e}"))?
+    }
+
     /// Waits until the connection is closed and returns the human-readable close reason.
     pub async fn closed(&self) -> String {
         let conn = self.inner.clone();

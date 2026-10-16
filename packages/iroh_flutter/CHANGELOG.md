@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Builds the native core against iroh 1.3.0 and exposes its new APIs (batch datagrams,
+  `RelayStatus.authDeniedReason`); see the `iroh_quic` changelog. ABI version 2.
+- `flutter_lints` ^6.0.0. The analysis options now exclude `build/` and the platform folders,
+  so Flutter 3.47+ no longer rewrites them on `pub get`.
+
 ## 1.0.3
 
 - **Windows/Linux:** fix the CMake generate failure `No target "iroh_flutter_plugin"` when

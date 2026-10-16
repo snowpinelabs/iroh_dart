@@ -103,12 +103,13 @@ pass `await Iroh.init(libraryPath: '/path/to/libirohdart_ffi.so')` for any locat
   `RelayUrl`, `RelayMode`, `RelayMap`.
 - **Endpoint** - `Endpoint.bind({secretKey, alpns, relayMode})`, `close`, `isClosed`, `setAlpns`,
   `boundSockets`, `addr`, `connect`, `accept`, `acceptIncoming`.
-- **Connection & streams** - `openBi`/`openUni`/`acceptBi`/`acceptUni`, datagrams, `stats`,
+- **Connection & streams** - `openBi`/`openUni`/`acceptBi`/`acceptUni`, datagrams
+  (`sendDatagram`/`readDatagram` and the batch `sendManyDatagrams`/`readManyDatagrams`), `stats`,
   `remoteId`, `alpn`, `closed`; `SendStream` (`writeAll`/`finish`/`reset`),
   `RecvStream` (`read`/`readExact`/`readToEnd`/`stop`).
 - **Accept filter** - `Incoming` (`remoteAddr`, `accept`/`refuse`/`retry`/`ignore`).
-- **Reactive streams** - `Endpoint.watchAddr()`, `Endpoint.homeRelayStatus()`,
-  `Connection.pathEvents()` (sealed `PathEvent`).
+- **Reactive streams** - `Endpoint.watchAddr()`, `Endpoint.homeRelayStatus()` (`RelayStatus`
+  with `lastError` and `authDeniedReason`), `Connection.pathEvents()` (sealed `PathEvent`).
 - **Multi-protocol routing** - `Endpoint.router()` -> `RouterBuilder.accept(alpn, handler)` ->
   `spawn()`/`Router.shutdown()`: register a Dart handler per ALPN and let iroh's `Router` dispatch.
 - **Custom address lookup** - `Endpoint.bindWithAddressLookup(resolve:)`: dial peers known only by

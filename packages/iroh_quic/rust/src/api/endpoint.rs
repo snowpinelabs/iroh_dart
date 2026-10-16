@@ -98,6 +98,7 @@ impl Endpoint {
     }
 
     /// Replaces the set of accepted ALPN protocols (affects new inbound connections only).
+    /// The order sets the preference: if a peer offers more than one ALPN, the first match wins.
     #[frb(sync)]
     pub fn set_alpns(&self, alpns: Vec<Vec<u8>>) {
         self.inner.set_alpns(alpns);
@@ -185,6 +186,7 @@ impl Endpoint {
                         url: s.url().to_string(),
                         connected: s.is_connected(),
                         last_error: s.last_error().map(|e| e.to_string()),
+                        auth_denied_reason: s.auth_denied_reason().map(str::to_string),
                     })
                     .collect();
                 if sink.add(mapped).is_err() {

@@ -17,7 +17,9 @@ import 'package:cryptography/cryptography.dart';
 Future<void> main(List<String> args) async {
   final hexKey = Platform.environment['IROHDART_SIGNING_KEY'];
   if (hexKey == null || hexKey.isEmpty) {
-    stderr.writeln('sign_prebuilt: IROHDART_SIGNING_KEY (hex Ed25519 seed or cargokit key) is not set.');
+    stderr.writeln(
+      'sign_prebuilt: IROHDART_SIGNING_KEY (hex Ed25519 seed or cargokit key) is not set.',
+    );
     exitCode = 1;
     return;
   }
@@ -29,8 +31,10 @@ Future<void> main(List<String> args) async {
 
   final seed = _seedFromHex(hexKey.trim());
   if (seed == null) {
-    stderr.writeln('sign_prebuilt: IROHDART_SIGNING_KEY must be 64 hex (32-byte seed) or 128 hex '
-        '(64-byte cargokit seed||public) chars.');
+    stderr.writeln(
+      'sign_prebuilt: IROHDART_SIGNING_KEY must be 64 hex (32-byte seed) or 128 hex '
+      '(64-byte cargokit seed||public) chars.',
+    );
     exitCode = 1;
     return;
   }

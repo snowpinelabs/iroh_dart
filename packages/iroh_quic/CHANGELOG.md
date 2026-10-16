@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **iroh 1.3.0:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.3.0
+  (was 1.0.0). This brings iroh's bug fixes (relay reconnect, router protocol ordering, Windows
+  receive errors) and the new resolver in `iroh-dns`.
+- New `Connection.sendManyDatagrams` and `Connection.readManyDatagrams`: send or receive a batch
+  of datagrams in one call (iroh 1.3 batch datagram API).
+- New `RelayStatus.authDeniedReason`: the reason a relay server denied this endpoint's
+  authentication. Retries do not usually fix this, so surface it to the user.
+- **ABI version 2.** The FFI surface changed shape, so the Dart bindings refuse a native library
+  built for ABI 1. Rebuild the native library or re-run `dart run iroh_quic:setup`.
+- Dependencies: `flutter_rust_bridge` 2.13.0 (runtime and codegen), `lints` ^6.1.0, and the latest
+  Rust crates (`tokio` 1.53, `futures` 0.3.34, `rustls-platform-verifier` 0.7.1, and more).
+
 ## 1.0.3
 
 - Loosen the `flutter_rust_bridge` runtime dependency to `^2.12.0` (was pinned to `2.12.0`).

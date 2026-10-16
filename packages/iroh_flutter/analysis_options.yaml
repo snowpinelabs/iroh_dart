@@ -7,3 +7,10 @@ analyzer:
     - "cargokit/**"
     - "rust/**"
     - "example/**"
+    # Build output and platform scaffolds. Flutter 3.47+ adds these on `pub get` if they are absent.
+    - "build/**"
+    - "android/**"
+    - "ios/**"
+    - "macos/**"
+    - "linux/**"
+    - "windows/**"

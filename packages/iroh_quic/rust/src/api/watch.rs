@@ -24,6 +24,9 @@ pub struct RelayStatusInfo {
     pub url: String,
     pub connected: bool,
     pub last_error: Option<String>,
+    /// The reason that the relay server gave when it denied the authentication of the endpoint.
+    /// This failure does not usually go away with retries.
+    pub auth_denied_reason: Option<String>,
 }
 
 /// Discriminant for [`PathEventInfo`]. `Unknown` absorbs any future `#[non_exhaustive]` variant.

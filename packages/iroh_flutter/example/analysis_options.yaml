@@ -12,6 +12,14 @@ include: package:flutter_lints/flutter.yaml
 formatter:
   page_width: 100
 
+analyzer:
+  # Build output and platform scaffolds. Flutter 3.47+ adds these on `pub get` if they are absent.
+  exclude:
+    - "build/**"
+    - "android/**"
+    - "ios/**"
+    - "macos/**"
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

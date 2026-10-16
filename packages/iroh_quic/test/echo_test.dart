@@ -111,6 +111,33 @@ void main() {
     expect(conn.stats.udpTxDatagrams, greaterThanOrEqualTo(0));
   });
 
+  test('batch datagram round-trip (sendManyDatagrams / readManyDatagrams)', () async {
+    final (server, client, serverAddr) = await pair();
+    addTearDown(server.close);
+    addTearDown(client.close);
+
+    final batch = [for (var i = 0; i < 3; i++) Uint8List.fromList('ping-$i'.codeUnits)];
+
+    final served = () async {
+      final conn = await server.accept();
+      // The empty batch resolves at once, and a negative count is a caller error.
+      expect(await conn!.readManyDatagrams(maxCount: 0), isEmpty);
+      expect(() => conn.readManyDatagrams(maxCount: -1), throwsRangeError);
+      final received = <Uint8List>[];
+      while (received.length < batch.length) {
+        final chunk = await conn.readManyDatagrams(maxCount: batch.length);
+        expect(chunk.length, inInclusiveRange(1, batch.length));
+        received.addAll(chunk);
+      }
+      return received;
+    }();
+
+    final conn = await client.connect(serverAddr, alpn.codeUnits);
+    expect(conn.sendManyDatagrams(batch), batch.length);
+
+    expect(await served, batch);
+  });
+
   test('partial reads via read(maxLen) reassemble the payload', () async {
     final (server, client, serverAddr) = await pair();
     addTearDown(server.close);

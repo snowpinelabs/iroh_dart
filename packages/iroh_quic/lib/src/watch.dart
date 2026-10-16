@@ -5,7 +5,12 @@ library;
 
 /// A relay server's connection status, emitted by `Endpoint.homeRelayStatus`.
 final class RelayStatus {
-  const RelayStatus({required this.url, required this.connected, this.lastError});
+  const RelayStatus({
+    required this.url,
+    required this.connected,
+    this.lastError,
+    this.authDeniedReason,
+  });
 
   /// The relay server URL.
   final String url;
@@ -13,13 +18,19 @@ final class RelayStatus {
   /// Whether the endpoint is currently connected to this relay.
   final bool connected;
 
-  /// The last connection error, if the relay is disconnected.
+  /// The most recent connection error, for logs or display only. Do not match on the text.
   final String? lastError;
+
+  /// The reason that the relay server gave when it denied the authentication of this endpoint.
+  /// Retries do not usually correct this failure, so show it to the user. It is `null` when the
+  /// relay is connected, when no attempt failed, or when the last failure had a different cause.
+  final String? authDeniedReason;
 
   @override
   String toString() =>
       'RelayStatus($url, connected: $connected'
-      '${lastError == null ? '' : ', error: $lastError'})';
+      '${lastError == null ? '' : ', error: $lastError'}'
+      '${authDeniedReason == null ? '' : ', authDenied: $authDeniedReason'})';
 }
 
 /// A path lifecycle event on a [Connection]. Sealed: switch over the subtypes. The

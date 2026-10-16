@@ -25,34 +25,37 @@ Future<void> main(List<String> args) async {
 
   final target = currentPrebuiltTarget();
   if (target == null) {
-    stderr.writeln('iroh_quic: unknown platform/arch (${Platform.operatingSystem}); '
-        'build manually with `cargo build` in the rust/ crate and pass libraryPath: to Iroh.init().');
+    stderr.writeln(
+      'iroh_quic: unknown platform/arch (${Platform.operatingSystem}); '
+      'build manually with `cargo build` in the rust/ crate and pass libraryPath: to Iroh.init().',
+    );
     exitCode = 1;
     return;
   }
 
   if (!File(manifestPath).existsSync()) {
     stderr.writeln('iroh_quic: crate manifest not found at $manifestPath');
-    stderr.writeln('Pass --manifest-path <path-to-rust/Cargo.toml> pointing at the iroh_quic crate.');
+    stderr.writeln(
+      'Pass --manifest-path <path-to-rust/Cargo.toml> pointing at the iroh_quic crate.',
+    );
     exitCode = 1;
     return;
   }
 
   if (!await _hasCargo()) {
-    stderr.writeln('iroh_quic: `cargo` not found. Install the Rust toolchain from https://rustup.rs, '
-        'or run `dart run iroh_quic:setup` to download a signed prebuilt instead.');
+    stderr.writeln(
+      'iroh_quic: `cargo` not found. Install the Rust toolchain from https://rustup.rs, '
+      'or run `dart run iroh_quic:setup` to download a signed prebuilt instead.',
+    );
     exitCode = 1;
     return;
   }
 
   final profile = release ? 'release' : 'debug';
-  stdout.writeln('iroh_quic: building $profile from $manifestPath (this compiles the iroh stack)...');
-  final cargoArgs = <String>[
-    'build',
-    if (release) '--release',
-    '--manifest-path',
-    manifestPath,
-  ];
+  stdout.writeln(
+    'iroh_quic: building $profile from $manifestPath (this compiles the iroh stack)...',
+  );
+  final cargoArgs = <String>['build', if (release) '--release', '--manifest-path', manifestPath];
   final proc = await Process.start('cargo', cargoArgs, mode: ProcessStartMode.inheritStdio);
   final code = await proc.exitCode;
   if (code != 0) {

@@ -20,7 +20,7 @@ workspace:
 
 dev_dependencies:
   # Monorepo task runner (scripts/versioning). Melos 7+ uses native pub workspaces; no melos.yaml.
-  melos: ^8.0.0
+  melos: ^8.9.0
 
 # Melos configuration (lives here under the `melos:` key since Melos 7 removed melos.yaml).
 melos:

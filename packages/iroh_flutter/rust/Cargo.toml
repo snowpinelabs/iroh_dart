@@ -19,13 +19,13 @@ crate-type = ["staticlib", "cdylib", "lib"]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
 
 [dependencies]
-# Pin the FRB runtime EXACTLY to the codegen version (2.12.0) - they must match.
-flutter_rust_bridge = "=2.12.0"
+# Pin the FRB runtime EXACTLY to the codegen version (2.13.0) - they must match.
+flutter_rust_bridge = "=2.13.0"
 # Own the `iroh` crate directly. default-features = false drops `fast-apple-datapath`
 # (private Apple API -> App Store risk) and `metrics`; `tls-ring` installs the rustls
 # CryptoProvider so we never expose it to Dart.
-iroh = { version = "1.0", default-features = false, features = ["tls-ring"] }
-iroh-base = "1.0"
+iroh = { version = "1.3", default-features = false, features = ["tls-ring"] }
+iroh-base = "1.3"
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread"] }
 # Stream bridging for Watcher / path_events / accept loop.
 futures = "0.3"
@@ -45,7 +45,7 @@ bytes = "1"
 # install_android_jni_context entry point (the ndk-context instance shared with netdev/hickory).
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22"
-iroh-dns = "1.0"
+iroh-dns = "1.3"
 rustls-platform-verifier = "0.7"
 
 # Dev/debug builds (used by `cargo test` and local `cargo build`) carry no debuginfo -

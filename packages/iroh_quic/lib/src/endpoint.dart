@@ -137,7 +137,14 @@ final class Endpoint {
   Stream<List<RelayStatus>> homeRelayStatus() => _cancellableStream(
     (token) => _inner.homeRelayStatus(token: token),
     (list) => list
-        .map((s) => RelayStatus(url: s.url, connected: s.connected, lastError: s.lastError))
+        .map(
+          (s) => RelayStatus(
+            url: s.url,
+            connected: s.connected,
+            lastError: s.lastError,
+            authDeniedReason: s.authDeniedReason,
+          ),
+        )
         .toList(),
   );
 
@@ -147,7 +154,8 @@ final class Endpoint {
   /// Whether the endpoint has been closed.
   bool get isClosed => _inner.isClosed();
 
-  /// Replaces the accepted ALPN protocols (affects new inbound connections only).
+  /// Replaces the accepted ALPN protocols (affects new inbound connections only). The order sets
+  /// the preference: if a peer offers more than one ALPN, the first match in [alpns] wins.
   void setAlpns(List<List<int>> alpns) =>
       _inner.setAlpns(alpns: alpns.map(Uint8List.fromList).toList());
 

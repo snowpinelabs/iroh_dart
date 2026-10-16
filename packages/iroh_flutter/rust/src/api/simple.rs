@@ -5,7 +5,7 @@
 
 /// The current ABI revision of the `irohdart-ffi` surface. The Dart side refuses to run on a
 /// mismatch (see `lib/src/ffi/loader.dart`).
-pub const IROHDART_ABI_VERSION: u32 = 1;
+pub const IROHDART_ABI_VERSION: u32 = 2;
 
 /// Returns the ABI version compiled into this native library.
 ///
@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn abi_version_is_pinned() {
-        assert_eq!(irohdart_abi_version(), 1);
-        assert_eq!(IROHDART_ABI_VERSION, 1);
+        assert_eq!(irohdart_abi_version(), 2);
+        assert_eq!(IROHDART_ABI_VERSION, 2);
     }
 }
