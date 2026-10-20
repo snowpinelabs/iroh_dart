@@ -19,16 +19,19 @@ buildscript {
 // The app project resolves the transitive dependencies of this plugin with ITS OWN repository
 // list. Thus, this file adds the rustls-platform-verifier repository to all projects, the same as
 // google() and mavenCentral(). A `repositories` block in this module is not sufficient.
-// The closure below runs for each project, so this line finds the path one time only.
-def rustlsPlatformVerifierRepo = findRustlsPlatformVerifierProject()
+// The closure below runs for each project, so this line finds the version one time only.
+def rustlsPlatformVerifierVersion = findRustlsPlatformVerifierVersion()
 
 rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
         maven {
-            url = rustlsPlatformVerifierRepo
-            metadataSources.artifact()
+            url = "https://github.com/rustls/rustls-platform-verifier/raw/maven-archive/android-release-support/maven/"
+            // Gradle must not look for the other dependencies of the app in this repository.
+            content {
+                includeGroup("org.rustls")
+            }
         }
     }
 }
@@ -59,11 +62,13 @@ cargokit {
 
 // iroh checks TLS certificates through rustls-platform-verifier, for example for pkarr HTTPS
 // publication and relay probes. At run time, rustls-platform-verifier needs a small Kotlin
-// component in the app. The rustls-platform-verifier-android package contains the AAR for the
-// same version. This function gives the path of that AAR as a local Maven repository.
+// component in the app. The upstream project publishes the AAR of this component in a Maven
+// repository on GitHub. The crate rustls-platform-verifier-android has the same version as the
+// AAR that the Rust code needs. A different version of the AAR can cause crashes at run time.
+// Thus, this function gives the version of that crate in ../rust/Cargo.lock.
 // The upstream documentation shows this procedure
 // (https://github.com/rustls/rustls-platform-verifier#android).
-String findRustlsPlatformVerifierProject() {
+String findRustlsPlatformVerifierVersion() {
     def cargoManifest = file("../rust/Cargo.toml").absolutePath
     def metadataText
     try {
@@ -79,10 +84,14 @@ String findRustlsPlatformVerifierProject() {
                 e.message, e)
     }
     def metadata = new JsonSlurper().parseText(metadataText)
-    def manifestPath = file(metadata.packages.find { it.name == "rustls-platform-verifier-android" }.manifest_path)
-    return new File(manifestPath.parentFile, "maven").path
+    def androidPackage = metadata.packages.find { it.name == "rustls-platform-verifier-android" }
+    if (androidPackage == null) {
+        throw new GradleException(
+                "iroh_flutter: 'cargo metadata' has no rustls-platform-verifier-android package")
+    }
+    return androidPackage.version
 }
 
 dependencies {
-    implementation "rustls:rustls-platform-verifier:latest.release"
+    implementation "org.rustls:rustls-platform-verifier:${rustlsPlatformVerifierVersion}"
 }

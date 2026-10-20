@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- Version bump in lockstep with `iroh_flutter` 1.1.1 (Android build fix for
+  `rustls-platform-verifier` 0.7.1); no changes to the Dart/Rust API.
+
 ## 1.1.0
 
 - **iroh 1.3.0:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.3.0

@@ -3,6 +3,7 @@ name: ci
 # CI for the iroh_dart monorepo (packages/iroh_quic and packages/iroh_flutter).
 # - green-gate: runs the Rust tests and the pure-Dart package tests.
 # - flutter-analyze: resolves the workspace and analyzes the plugin and its example app.
+# - android-apk: builds the example app for Android with Gradle, the same as a consumer app.
 # - cross-compile: makes sure that the crate builds for each native target family.
 # The workflow publish.yml builds the prebuilt libraries and publishes to pub.dev on version tags.
 
@@ -53,6 +54,26 @@ jobs:
       - run: flutter pub get
       - run: dart analyze --fatal-infos packages/iroh_flutter
       - run: flutter analyze packages/iroh_flutter/example
+
+  # The Gradle build of the plugin gets the Kotlin component of rustls-platform-verifier.
+  # The cross-compile job does not use Gradle. Thus this job builds the example app as an APK.
+  # One ABI is sufficient to examine the Gradle setup and the R8 keep rules of the plugin.
+  android-apk:
+    name: android apk (example, release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: aarch64-linux-android
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 17 }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: flutter pub get
+      - name: Build release APK (arm64)
+        working-directory: packages/iroh_flutter/example
+        run: flutter build apk --release --target-platform android-arm64
 
   cross-compile:
     name: cross-compile ${{ matrix.name }}

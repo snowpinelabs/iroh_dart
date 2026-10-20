@@ -3,7 +3,7 @@ description: >-
   Flutter plugin for iroh 1.x - peer-to-peer QUIC networking on Android, iOS,
   macOS, Linux, and Windows. Builds the native Rust core into your app via
   cargokit and exposes the full iroh_quic API.
-version: 1.1.0
+version: 1.1.1
 homepage: https://github.com/snowpinelabs/iroh_dart
 repository: https://github.com/snowpinelabs/iroh_dart
 issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
@@ -28,7 +28,7 @@ dependencies:
   # iroh_quic contains the Dart API and the FFI loader. This plugin only adds the native build.
   # A hosted constraint (not a path dependency) keeps the published archive valid.
   # In the workspace, this constraint resolves to the local copy.
-  iroh_quic: ^1.1.0
+  iroh_quic: ^1.1.1
 
 dev_dependencies:
   flutter_lints: ^6.0.0
