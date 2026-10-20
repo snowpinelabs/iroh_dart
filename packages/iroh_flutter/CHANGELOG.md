@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1
+
+- **Android:** fix the app build failure `Could not find any matches for
+  rustls:rustls-platform-verifier:latest.release`. `rustls-platform-verifier` 0.7.1 no longer
+  bundles its Kotlin component (AAR) in the crate, and it publishes the AAR under the Maven group
+  `org.rustls`. The plugin now gets the AAR from the upstream Maven repository on GitHub. It uses
+  the exact version that `Cargo.lock` locks. Android builds need network access to `github.com`.
+
 ## 1.1.0
 
 - Builds the native core against iroh 1.3.0 and exposes its new APIs (batch datagrams,
