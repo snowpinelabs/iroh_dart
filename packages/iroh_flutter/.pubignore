@@ -16,4 +16,14 @@ rust/target/
 **/xcuserdata/
 .DS_Store
 **/.DS_Store
-example/
+# pub.dev shows example/lib/main.dart on the Example tab and gives points for it. The archive
+# contains only the Dart part of the example app, not the platform projects or the tests.
+example/*
+!example/lib/
+!example/pubspec.yaml
+!example/README.md
+# Swift Package Manager: local build output and the local XCFramework of tool/build_xcframework.sh.
+# The published Swift package downloads the XCFramework from the GitHub release.
+**/.build/
+**/.swiftpm/
+darwin/iroh_flutter/Frameworks/

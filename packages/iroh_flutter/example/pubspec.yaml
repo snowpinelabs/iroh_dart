@@ -14,7 +14,7 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  iroh_flutter: ^1.1.1
+  iroh_flutter: ^1.2.0
 
 dev_dependencies:
   flutter_test:

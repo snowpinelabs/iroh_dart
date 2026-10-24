@@ -1,9 +1,8 @@
 name: iroh_flutter
 description: >-
-  Flutter plugin for iroh 1.x - peer-to-peer QUIC networking on Android, iOS,
-  macOS, Linux, and Windows. Builds the native Rust core into your app via
-  cargokit and exposes the full iroh_quic API.
-version: 1.1.1
+  Flutter plugin for iroh 1.x: peer-to-peer QUIC networking on Android, iOS, macOS, Linux, and
+  Windows. Builds the Rust core into your app.
+version: 1.2.0
 homepage: https://github.com/snowpinelabs/iroh_dart
 repository: https://github.com/snowpinelabs/iroh_dart
 issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues
@@ -28,7 +27,7 @@ dependencies:
   # iroh_quic contains the Dart API and the FFI loader. This plugin only adds the native build.
   # A hosted constraint (not a path dependency) keeps the published archive valid.
   # In the workspace, this constraint resolves to the local copy.
-  iroh_quic: ^1.1.1
+  iroh_quic: ^1.2.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0
@@ -48,10 +47,14 @@ flutter:
       android:
         package: io.snowpine.iroh_flutter
         pluginClass: IrohFlutterPlugin
+      # iOS and macOS share the darwin/ directory. It contains one podspec for CocoaPods and one
+      # Swift package (darwin/iroh_flutter/Package.swift) for Swift Package Manager.
       ios:
         ffiPlugin: true
+        sharedDarwinSource: true
       macos:
         ffiPlugin: true
+        sharedDarwinSource: true
       linux:
         ffiPlugin: true
       windows:

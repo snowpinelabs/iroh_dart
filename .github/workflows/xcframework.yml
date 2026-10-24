@@ -1,0 +1,90 @@
+name: xcframework
+
+# This workflow builds irohdart_ffi.xcframework for the Swift package of iroh_flutter.
+# Run it manually on the release branch after the version bump and before the version tag.
+#
+# Swift Package Manager cannot run cargo, so the Swift package downloads this prebuilt framework.
+# Package.swift must contain the SwiftPM checksum of the framework archive. The release workflow
+# publishes the plugin from the tagged commit, so the checksum must be in that commit. Thus this
+# workflow runs before the tag. It has these steps:
+#   1. Builds the framework with tool/build_xcframework.sh.
+#   2. Attaches irohdart_ffi.xcframework.zip to the release `xcframework-v<version>`. It also
+#      attaches source-tree.txt, the Git tree hash of packages/iroh_flutter/rust.
+#   3. Opens a pull request that writes the version and the checksum into Package.swift.
+# The verify-xcframework job of publish.yml compares the release with the tagged commit.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write        # Create the release, attach the framework, and push the branch.
+  pull-requests: write   # Open the pull request.
+
+env:
+  CARGO_TERM_COLOR: always
+  PACKAGE_SWIFT: packages/iroh_flutter/darwin/iroh_flutter/Package.swift
+
+jobs:
+  build:
+    name: build and release irohdart_ffi.xcframework
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios aarch64-apple-darwin x86_64-apple-darwin
+      # The release workflow examines the mirror. A framework from a stale mirror is not correct.
+      - run: bash tool/sync_native.sh
+      - name: Fail if packages/iroh_flutter/rust is out of sync with packages/iroh_quic/rust
+        run: git diff --exit-code -- packages/iroh_flutter/rust
+      - name: Build irohdart_ffi.xcframework
+        run: bash tool/build_xcframework.sh --out "$RUNNER_TEMP/xcframework" --zip
+      - name: Attach the framework to the release and open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version: //p' packages/iroh_flutter/pubspec.yaml)"
+          tag="xcframework-v$version"
+          zip="$RUNNER_TEMP/xcframework/irohdart_ffi.xcframework.zip"
+          checksum="$(shasum -a 256 "$zip" | cut -d ' ' -f 1)"
+          git rev-parse HEAD:packages/iroh_flutter/rust > "$RUNNER_TEMP/source-tree.txt"
+
+          # The release is not the latest release, because the `v<version>` release has that role.
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "$tag" --latest=false \
+              --notes "irohdart_ffi.xcframework for the Swift package of iroh_flutter $version."
+          fi
+          gh release upload "$tag" "$zip" "$RUNNER_TEMP/source-tree.txt" --clobber \
+            --repo "$GITHUB_REPOSITORY"
+
+          sed -i '' \
+            -e "s/^let version = \".*\"$/let version = \"$version\"/" \
+            -e "s/^let checksum = \".*\"$/let checksum = \"$checksum\"/" \
+            "$PACKAGE_SWIFT"
+          {
+            echo "### irohdart_ffi.xcframework $version"
+            echo
+            echo "- Release: \`$tag\`"
+            echo "- Checksum: \`$checksum\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if git diff --quiet -- "$PACKAGE_SWIFT"; then
+            echo "Package.swift already contains this version and checksum."
+            exit 0
+          fi
+
+          branch="xcframework-v$version"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -m "Set the XCFramework checksum for $version" -- "$PACKAGE_SWIFT"
+          git push --force origin "$branch"
+          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "The pull request for $branch exists. The push updated it."
+            exit 0
+          fi
+          gh pr create --repo "$GITHUB_REPOSITORY" --base "$GITHUB_REF_NAME" --head "$branch" \
+            --title "Set the XCFramework checksum for $version" \
+            --body "Writes the version and SwiftPM checksum of the \`$tag\` release into Package.swift."

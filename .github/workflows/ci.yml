@@ -4,6 +4,7 @@ name: ci
 # - green-gate: runs the Rust tests and the pure-Dart package tests.
 # - flutter-analyze: resolves the workspace and analyzes the plugin and its example app.
 # - android-apk: builds the example app for Android with Gradle, the same as a consumer app.
+# - macos-spm: builds the example app for macOS with Swift Package Manager and a local XCFramework.
 # - cross-compile: makes sure that the crate builds for each native target family.
 # The workflow publish.yml builds the prebuilt libraries and publishes to pub.dev on version tags.
 
@@ -74,6 +75,26 @@ jobs:
       - name: Build release APK (arm64)
         working-directory: packages/iroh_flutter/example
         run: flutter build apk --release --target-platform android-arm64
+
+  # Swift Package Manager is the default from Flutter 3.44. The Swift package of the plugin uses
+  # a local XCFramework if one is in darwin/iroh_flutter/Frameworks. Thus this job does not need
+  # a release. One platform is sufficient to examine Package.swift and the framework bundle.
+  macos-spm:
+    name: macos app (example, swift package manager)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: aarch64-apple-darwin x86_64-apple-darwin
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: bash tool/build_xcframework.sh --platforms macos
+      - run: flutter config --enable-swift-package-manager
+      - run: flutter pub get
+      - name: Build debug macOS app
+        working-directory: packages/iroh_flutter/example
+        run: flutter build macos --debug
 
   cross-compile:
     name: cross-compile ${{ matrix.name }}

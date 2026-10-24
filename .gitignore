@@ -42,6 +42,10 @@ packages/*/pubspec.lock
 **/android/src/main/jniLibs/
 **/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 **/linux/flutter/ephemeral/
+# Swift Package Manager: build output and the local XCFramework of tool/build_xcframework.sh.
+**/.build/
+**/.swiftpm/
+packages/iroh_flutter/darwin/iroh_flutter/Frameworks/
 **/windows/flutter/ephemeral/
 
 # === IDE ===

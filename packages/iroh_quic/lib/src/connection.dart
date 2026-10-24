@@ -111,6 +111,7 @@ PathEvent _pathEventFromInfo(ffi_watch.PathEventInfo e) => switch (e.kind) {
 
 /// The values of some connection counters at one time. [Connection.stats] returns this object.
 final class ConnectionStats {
+  /// Makes a set of connection counters from the given values.
   const ConnectionStats({
     required this.udpTxDatagrams,
     required this.udpTxBytes,
