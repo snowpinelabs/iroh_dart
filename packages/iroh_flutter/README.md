@@ -1,6 +1,6 @@
 # iroh_flutter
 
-**Flutter plugin** for **[iroh](https://github.com/n0-computer/iroh) 1.0**: peer-to-peer QUIC
+**Flutter plugin** for **[iroh](https://github.com/n0-computer/iroh) 1.x**: peer-to-peer QUIC
 networking (endpoints, connections, streams, relays, address lookup) on **Android, iOS, macOS,
 Linux, and Windows**.
 

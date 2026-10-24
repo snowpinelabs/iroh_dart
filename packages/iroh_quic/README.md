@@ -1,6 +1,6 @@
 # iroh_quic
 
-**Pure-Dart** binding for **[iroh](https://github.com/n0-computer/iroh) 1.0** - peer-to-peer QUIC
+**Pure-Dart** binding for **[iroh](https://github.com/n0-computer/iroh) 1.x** - peer-to-peer QUIC
 networking (endpoints, connections, streams, relays, address lookup) on **desktop Linux, macOS, and
 Windows**. **No Flutter required.** For **Android / iOS**, use the companion
 [`iroh_flutter`](https://pub.dev/packages/iroh_flutter) plugin: same API, native build bundled into
