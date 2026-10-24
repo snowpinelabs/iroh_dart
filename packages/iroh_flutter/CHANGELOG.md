@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- **iOS/macOS:** support Swift Package Manager. This removes the warning `The following plugins 
+  do not support Swift Package Manager`. Xcode cannot run cargo in a
+  Swift package build, so the Swift package downloads a prebuilt dynamic
+  `irohdart_ffi.xcframework` from the GitHub release `xcframework-v<version>`.
+
 ## 1.1.1
 
 - **Android:** fix the app build failure `Could not find any matches for

@@ -20,12 +20,14 @@ Flutter apps. Pick `iroh_quic` for a desktop/CLI Dart program, `iroh_flutter` fo
 ```
 pubspec.yaml                      workspace root + Melos config (no melos.yaml)
 tool/sync_native.sh               vendors the shared crate into the plugin (cargokit needs it co-located)
+tool/build_xcframework.sh         builds irohdart_ffi.xcframework for the Swift package of the plugin
 packages/
   iroh_quic/                      pure-Dart binding (publishable)
     rust/                         the owned `irohdart_ffi` crate (canonical source of truth)
     lib/  bin/  test/  tool/
   iroh_flutter/                   Flutter plugin (publishable)
-    android/ ios/ macos/ linux/ windows/   cargokit native build per platform
+    android/ darwin/ linux/ windows/   cargokit native build per platform
+                                  (darwin/ = iOS + macOS: podspec + Swift package)
     cargokit/                     vendored build glue
     rust/                         generated copy of the crate (gitignored; from sync_native.sh)
     example/                      example app + on-device integration tests
@@ -56,7 +58,26 @@ is gitignored and re-vendored before publishing).
   toolchain needed. Or `dart run iroh_quic:build` to compile from source.
 - **iroh_flutter (mobile/desktop):** cargokit compiles the crate during the consumer's app build (no
   download); force `cargokit_options.yaml: use_precompiled_binaries: false` to always build from
-  source.
+  source. Exception: with Swift Package Manager on iOS/macOS, Xcode cannot run cargo, so the Swift
+  package downloads a prebuilt `irohdart_ffi.xcframework` from the GitHub release
+  `xcframework-v<version>`. CocoaPods builds keep using cargokit.
+
+### Releasing the XCFramework
+
+`darwin/iroh_flutter/Package.swift` holds the version and SwiftPM checksum of the XCFramework, and
+the checksum must be in the tagged commit. So, after the version bump and before the tag:
+
+1. Run the **xcframework** workflow (Actions → xcframework → Run workflow) on the release branch.
+   It runs `tool/build_xcframework.sh`, attaches `irohdart_ffi.xcframework.zip` to the release
+   `xcframework-v<version>`, and opens a pull request that writes the version and checksum into
+   `Package.swift`.
+2. Merge that pull request, then push the `v<version>` tag as usual. The release workflow stops
+   before it publishes anything if the checksum, the version, or the crate source does not agree
+   with the XCFramework release.
+
+For a local build, `bash tool/build_xcframework.sh` writes the framework into
+`darwin/iroh_flutter/Frameworks/` (gitignored), and `Package.swift` uses it instead of the
+download.
 
 See each package's README for details.
 

@@ -4,7 +4,7 @@
 //
 // Run `dart run iroh_quic:setup` or `cargo build --release` first. Then run this command from
 // the package root:
-//   dart run example/echo.dart
+//   dart run example/iroh_quic_example.dart
 import 'dart:typed_data';
 
 import 'package:iroh_quic/iroh_quic.dart';

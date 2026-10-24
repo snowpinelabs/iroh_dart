@@ -2,6 +2,8 @@ name: release
 
 # This workflow runs on a version tag, for example `v1.0.0`. It has these jobs:
 #   green-gate             - Runs the Rust tests and the pure-Dart package tests.
+#   verify-xcframework     - Makes sure that the XCFramework release in Package.swift agrees with
+#                            the tagged commit. The xcframework workflow made this release.
 #   create-release         - Makes sure that the release for the tag exists. The release
 #                            holds the prebuilt libraries.
 #   prebuilt (matrix)      - Builds the native library for each desktop target and signs it with Ed25519.
@@ -20,6 +22,9 @@ name: release
 #
 # The workflow builds no prebuilt library for Android or iOS.
 # On these platforms, the plugin uses cargokit to compile the crate during the app build.
+# Exception: the Swift package of the plugin uses a prebuilt XCFramework for iOS and macOS.
+# The xcframework workflow builds it before the tag, because the tagged commit must contain its
+# checksum.
 #
 # Required secrets:
 #   IROHDART_SIGNING_KEY - The Ed25519 signing key (hex).
@@ -53,9 +58,45 @@ jobs:
       # check.sh resolves the workspace, runs cargo build and cargo test, and runs dart analyze and dart test.
       - run: ./packages/iroh_quic/tool/check.sh
 
+  # The Swift package downloads the XCFramework from the URL in Package.swift and compares the
+  # archive with the checksum in Package.swift. This job does the same checks before publication.
+  # It also makes sure that the framework comes from the crate source of the tagged commit.
+  verify-xcframework:
+    name: verify the XCFramework release of the Swift package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compare the XCFramework release with Package.swift and the crate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest=packages/iroh_flutter/darwin/iroh_flutter/Package.swift
+          version="$(sed -n 's/^version: //p' packages/iroh_flutter/pubspec.yaml)"
+          manifest_version="$(sed -n 's/^let version = "\(.*\)"$/\1/p' "$manifest")"
+          manifest_checksum="$(sed -n 's/^let checksum = "\(.*\)"$/\1/p' "$manifest")"
+          if [ "$manifest_version" != "$version" ]; then
+            echo "::error::Package.swift has version $manifest_version, but pubspec.yaml has $version. Run the xcframework workflow."
+            exit 1
+          fi
+          tag="xcframework-v$version"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir xcframework \
+            --pattern irohdart_ffi.xcframework.zip --pattern source-tree.txt
+          checksum="$(sha256sum xcframework/irohdart_ffi.xcframework.zip | cut -d ' ' -f 1)"
+          if [ "$checksum" != "$manifest_checksum" ]; then
+            echo "::error::The $tag archive has checksum $checksum, but Package.swift has $manifest_checksum. Run the xcframework workflow."
+            exit 1
+          fi
+          tree="$(git rev-parse HEAD:packages/iroh_flutter/rust)"
+          if [ "$(cat xcframework/source-tree.txt)" != "$tree" ]; then
+            echo "::error::The $tag framework was not built from the crate of this commit. Run the xcframework workflow."
+            exit 1
+          fi
+
   create-release:
     name: ensure release exists
-    needs: green-gate
+    needs: [green-gate, verify-xcframework]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

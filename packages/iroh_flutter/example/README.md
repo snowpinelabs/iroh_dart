@@ -1,17 +1,16 @@
-# iroh_dart_example
+# iroh_flutter example
 
-A new Flutter project.
+A Flutter app that binds two iroh endpoints, connects them over QUIC, and echoes a message on a
+bidirectional stream. The source is in [`lib/main.dart`](lib/main.dart).
 
-## Getting Started
+```sh
+cd packages/iroh_flutter/example
+flutter run   # Android, iOS, macOS, Linux, or Windows
+```
 
-This project is a starting point for a Flutter application.
+`integration_test/smoke_test.dart` checks the native library load, endpoint bind, the echo, and
+address watching on a device:
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter test integration_test
+```

@@ -13,7 +13,7 @@ automatically by cargokit on first build if you don't already have one.
 
 ```yaml
 dependencies:
-  iroh_flutter: ^1.1.1
+  iroh_flutter: ^1.2.0
 ```
 
 ```dart
@@ -42,8 +42,14 @@ The API is identical to `iroh_quic`; see its
   engine startup. iroh needs it over JNI for system DNS, interface enumeration, and TLS trust.
   Nothing to configure; but if you build a custom engine setup that skips plugin registration,
   make sure `IrohFlutterPlugin` is registered before the first iroh call.
-- **iOS / macOS:** cargokit builds a staticlib and `-force_load`s it into the plugin framework, so
-  the FFI symbols are visible to `DynamicLibrary.process()`. iOS 13+ / macOS 11+.
+- **iOS / macOS:** iOS 13+ / macOS 11+. The plugin supports both Swift Package Manager and
+  CocoaPods.
+  - **Swift Package Manager** (the default from Flutter 3.44): Xcode cannot run cargo in a Swift
+    package build, so the package downloads a prebuilt `irohdart_ffi.xcframework` from the GitHub
+    release of the plugin version. The app embeds this dynamic framework. No Rust toolchain is
+    necessary.
+  - **CocoaPods:** cargokit builds a staticlib and `-force_load`s it into the plugin framework.
+  In both cases, the FFI symbols are visible to `DynamicLibrary.process()`.
 - **Linux / Windows:** cargokit builds a cdylib bundled next to the app.
 
 ## Pure-Dart / desktop CLI?
@@ -61,5 +67,11 @@ even when prebuilt binaries are configured, add a `cargokit_options.yaml` next t
 ```yaml
 use_precompiled_binaries: false
 ```
+
+On iOS and macOS with Swift Package Manager, cargokit does not run. To use a native library that
+you built yourself, run `tool/build_xcframework.sh` in a checkout of the repository. The script
+writes `darwin/iroh_flutter/Frameworks/irohdart_ffi.xcframework`, and the Swift package then uses
+it instead of the release download. As an alternative, turn off Swift Package Manager for your app
+(`flutter config --no-enable-swift-package-manager`) to use cargokit through CocoaPods.
 
 See the repository README for the full source-build guide.

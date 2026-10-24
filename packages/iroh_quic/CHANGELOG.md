@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Version bump in lockstep with `iroh_flutter` 1.2.0, which adds Swift Package Manager support on
+  iOS and macOS. The plugin uses a prebuilt `irohdart_ffi.xcframework` from the GitHub release
+  `xcframework-v1.2.0`. No changes to the Dart/Rust API.
+
 ## 1.1.1
 
 - Version bump in lockstep with `iroh_flutter` 1.1.1 (Android build fix for

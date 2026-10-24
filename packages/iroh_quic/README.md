@@ -123,7 +123,7 @@ Run the bundled headless example (`dart run`, no Flutter):
 ```sh
 cd rust && cargo build --release && cd ..
 dart pub get
-dart run example/echo.dart
+dart run example/iroh_quic_example.dart
 ```
 
 ## Develop
