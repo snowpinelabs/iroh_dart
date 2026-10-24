@@ -149,4 +149,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup and the release
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE). The iroh crate is MIT OR Apache-2.0.
+Apache-2.0. See [LICENSE](LICENSE).
