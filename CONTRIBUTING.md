@@ -22,16 +22,20 @@ change the Rust API, regenerate the Dart bindings with `packages/iroh_quic/tool/
 
 Both packages have the same version and are released together from `main`.
 
-1. Bump the version everywhere: both `pubspec.yaml` files (and the `iroh_quic` constraint in the
-   plugin), the crate's `Cargo.toml`, `kIrohdartLibVersion` in
-   `packages/iroh_quic/lib/src/ffi/prebuilt.dart`, and both changelogs. Run
-   `bash tool/sync_native.sh`. Merge this to `main`.
+1. Bump the version everywhere: both `pubspec.yaml` files, the `iroh_quic` constraint in the
+   plugin, the `iroh_flutter` constraint in the example app and in the plugin README, the crate's
+   `Cargo.toml` (then run `cargo metadata` in the crate so `Cargo.lock` follows),
+   `kIrohdartLibVersion` in `packages/iroh_quic/lib/src/ffi/prebuilt.dart`, and both changelogs.
+   Run `bash tool/sync_native.sh`. Merge this to `main`.
 2. Build the XCFramework for Swift Package Manager: run the **xcframework** workflow on `main`
-   (`gh workflow run xcframework.yml --ref main`). It attaches `irohdart_ffi.xcframework.zip` to
-   the GitHub release `xcframework-v<version>` and pushes a branch that writes the version and
-   checksum into `packages/iroh_flutter/darwin/iroh_flutter/Package.swift`. It also opens a pull
-   request for that branch if the repository allows GitHub Actions to create pull requests;
-   otherwise, open it yourself. Merge it.
+   (`gh workflow run xcframework.yml --ref main`). The run waits until a maintainer approves it
+   (Actions → the run → **Review deployments**), because it runs in the `xcframework`
+   environment. That environment accepts only `main`. The workflow attaches
+   `irohdart_ffi.xcframework.zip` to the GitHub release `xcframework-v<version>` and pushes a
+   branch that writes the version and checksum into
+   `packages/iroh_flutter/darwin/iroh_flutter/Package.swift`. Then it opens a pull request for that
+   branch. If the organization settings forbid pull requests from GitHub Actions, the run shows a
+   warning with a link instead, and you open the pull request yourself. Merge it.
 3. Push the tag `v<version>`. The **release** workflow checks that `Package.swift` agrees with the
    XCFramework release, builds and signs the desktop prebuilt libraries, and publishes both
    packages to pub.dev.

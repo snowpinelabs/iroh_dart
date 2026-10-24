@@ -40,6 +40,11 @@ The first build compiles the Rust core, and installs a Rust toolchain if you don
 On iOS and macOS with Swift Package Manager (the Flutter default since 3.44), the plugin downloads a
 prebuilt framework instead, so no Rust toolchain is needed there.
 
+**macOS:** add the `com.apple.security.network.client` and `com.apple.security.network.server`
+entitlements to both `macos/Runner/*.entitlements` files, or the sandbox blocks the endpoint's
+sockets in release builds. See
+[macOS: allow network access](packages/iroh_flutter/README.md#macos-allow-network-access).
+
 ### Dart (no Flutter)
 
 ```sh

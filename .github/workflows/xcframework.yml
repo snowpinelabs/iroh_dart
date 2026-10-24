@@ -1,7 +1,11 @@
 name: xcframework
 
 # This workflow builds irohdart_ffi.xcframework for the Swift package of iroh_flutter.
-# Run it manually on the release branch after the version bump and before the version tag.
+# Run it manually on `main` after the version bump and before the version tag.
+#
+# The job runs in the `xcframework` environment. GitHub lets only `main` deploy to that
+# environment, and a maintainer must approve each run. The first step also stops a run that is not
+# on `main`, because the run pushes a branch and opens a pull request.
 #
 # Swift Package Manager cannot run cargo, so the Swift package downloads this prebuilt framework.
 # Package.swift must contain the SwiftPM checksum of the framework archive. The release workflow
@@ -28,7 +32,14 @@ jobs:
   build:
     name: build and release irohdart_ffi.xcframework
     runs-on: macos-26
+    environment: xcframework
     steps:
+      - name: Fail if the run is not on main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run this workflow on main, not on $GITHUB_REF."
+            exit 1
+          fi
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.96.0
         with:
@@ -85,6 +96,12 @@ jobs:
             echo "The pull request for $branch exists. The push updated it."
             exit 0
           fi
-          gh pr create --repo "$GITHUB_REPOSITORY" --base "$GITHUB_REF_NAME" --head "$branch" \
+          if ! gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
             --title "Set the XCFramework checksum for $version" \
-            --body "Writes the version and SwiftPM checksum of the \`$tag\` release into Package.swift."
+            --body "Writes the version and SwiftPM checksum of the \`$tag\` release into Package.swift."; then
+            # The repository or organization settings can forbid pull requests from GitHub Actions.
+            # The branch exists, so a maintainer can open the pull request.
+            url="https://github.com/$GITHUB_REPOSITORY/pull/new/$branch"
+            echo "::warning::Could not open the pull request. Open it from $url"
+            echo "- Open the pull request: $url" >> "$GITHUB_STEP_SUMMARY"
+          fi
