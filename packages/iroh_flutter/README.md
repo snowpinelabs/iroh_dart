@@ -52,6 +52,31 @@ The API is identical to `iroh_quic`; see its
   In both cases, the FFI symbols are visible to `DynamicLibrary.process()`.
 - **Linux / Windows:** cargokit builds a cdylib bundled next to the app.
 
+### macOS: allow network access
+
+macOS Flutter apps run in the App Sandbox, and the sandbox blocks network access by default. Without
+network entitlements, `Endpoint.bind()` throws `IrohBindException: Failed to bind sockets`. The
+Flutter template allows only incoming connections, and only in debug builds, so a release build
+fails even when the debug build works.
+
+Add both keys to `macos/Runner/DebugProfile.entitlements` **and** `macos/Runner/Release.entitlements`:
+
+```xml
+<key>com.apple.security.network.client</key>
+<true/>
+<key>com.apple.security.network.server</key>
+<true/>
+```
+
+`network.client` allows outgoing connections, and `network.server` allows the endpoint to accept
+incoming connections.
+
+### iOS: local network permission
+
+iOS asks the user before an app talks to devices on the local network. If your app connects to
+peers on the same Wi-Fi network, add an `NSLocalNetworkUsageDescription` to `ios/Runner/Info.plist`
+that explains why. Connections through a relay or over the internet do not need it.
+
 ## Pure-Dart / desktop CLI?
 
 If you don't need Flutter (a `dart run` CLI or server on desktop), depend on
