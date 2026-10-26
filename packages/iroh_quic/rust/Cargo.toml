@@ -49,7 +49,7 @@ bytes = "1"
 # Thus `libc` 0.2.190 and later versions break the iOS build. Remove this limit when iroh uses a
 # `netdev` version that compiles on iOS with the latest `libc`.
 [target.'cfg(target_os = "ios")'.dependencies]
-libc = "<0.2.190"
+libc = ">=0.2.180, <0.2.190"
 
 # Android bootstrap (`src/android.rs`). iroh reads the system DNS servers, the network state, and
 # the TLS trust store through JNI. JNI needs the `JavaVM` and the `Context` of the app before the

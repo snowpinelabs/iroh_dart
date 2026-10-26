@@ -44,6 +44,13 @@ postcard = { version = "1", features = ["use-std"] }
 # The datagram functions of the iroh `Connection` use `bytes::Bytes` for payloads.
 bytes = "1"
 
+# iroh 1.4.1 uses `netwatch` 0.19, and `netwatch` uses `netdev` 0.46. On iOS, `netdev` 0.46 uses
+# `libc::in6_ifreq`. From version 0.2.190, `libc` declares this type only for macOS.
+# Thus `libc` 0.2.190 and later versions break the iOS build. Remove this limit when iroh uses a
+# `netdev` version that compiles on iOS with the latest `libc`.
+[target.'cfg(target_os = "ios")'.dependencies]
+libc = ">=0.2.180, <0.2.190"
+
 # Android bootstrap (`src/android.rs`). iroh reads the system DNS servers, the network state, and
 # the TLS trust store through JNI. JNI needs the `JavaVM` and the `Context` of the app before the
 # first endpoint exists. `jni` uses the same 0.22 line as `rustls-platform-verifier`.
