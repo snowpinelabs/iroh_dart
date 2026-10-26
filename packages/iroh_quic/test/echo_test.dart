@@ -109,6 +109,12 @@ void main() {
 
     expect(await served, datagram);
     expect(conn.stats.udpTxDatagrams, greaterThanOrEqualTo(0));
+    // The handshake and the datagram send QUIC packets. iroh 1.4 counts them.
+    final stats = conn.stats;
+    expect(stats.sentPackets, greaterThan(0));
+    expect(stats.sentBytes, greaterThan(0));
+    expect(stats.lostPackets, greaterThanOrEqualTo(0));
+    expect(stats.lostBytes, greaterThanOrEqualTo(0));
   });
 
   test('batch datagram round-trip (sendManyDatagrams / readManyDatagrams)', () async {

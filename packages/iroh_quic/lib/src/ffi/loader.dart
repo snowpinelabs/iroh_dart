@@ -11,7 +11,7 @@ import 'prebuilt.dart';
 /// `rust/src/api/simple.rs`. A different value means that the native library and the Dart bindings
 /// come from different versions. Then the loader refuses the native library. This prevents a crash
 /// at a later time.
-const int kIrohdartExpectedAbiVersion = 2;
+const int kIrohdartExpectedAbiVersion = 3;
 
 /// Loads and initializes the native library one time.
 ///

@@ -2,7 +2,7 @@ name: iroh_quic
 description: >-
   Pure-Dart binding for iroh 1.x: peer-to-peer QUIC networking with endpoints, connections,
   streams, and relays. Loads a prebuilt Rust core over dart:ffi.
-version: 1.2.0
+version: 1.3.0
 homepage: https://github.com/snowpinelabs/iroh_dart
 repository: https://github.com/snowpinelabs/iroh_dart
 issue_tracker: https://github.com/snowpinelabs/iroh_dart/issues

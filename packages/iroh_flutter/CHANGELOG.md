@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Builds the native core against iroh 1.4.1 and exposes the new connection counters
+  (`ConnectionStats.sentPackets`, `sentBytes`, `lostPackets`, `lostBytes`); see the `iroh_quic`
+  changelog. ABI version 3.
+
 ## 1.2.0
 
 - **iOS/macOS:** support Swift Package Manager. This removes the warning `The following plugins 

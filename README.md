@@ -5,7 +5,7 @@ Connect devices directly to each other, by public key, from Dart and Flutter.
 [iroh](https://github.com/n0-computer/iroh) gives every device a stable identity (an ed25519 key)
 and opens encrypted QUIC connections between them. It punches through NATs when it can and falls
 back to a relay server when it can't, so the same code works on a LAN, across the internet, and
-between phones on mobile networks. This repository wraps the iroh **1.3** Rust core for Dart; it
+between phones on mobile networks. This repository wraps the iroh **1.4** Rust core for Dart; it
 does not re-implement iroh, so iroh's own docs and concepts apply directly.
 
 ## Which package do I need?

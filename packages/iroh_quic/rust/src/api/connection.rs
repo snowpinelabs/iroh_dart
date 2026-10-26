@@ -124,12 +124,20 @@ impl Incoming {
     }
 }
 
-/// A snapshot of some UDP counters of a connection.
+/// A snapshot of some UDP and QUIC counters of a connection.
 pub struct ConnStats {
     pub udp_tx_datagrams: u64,
     pub udp_tx_bytes: u64,
     pub udp_rx_datagrams: u64,
     pub udp_rx_bytes: u64,
+    /// QUIC packets sent on all paths. Since iroh 1.4.
+    pub sent_packets: u64,
+    /// QUIC payload bytes sent on all paths. Since iroh 1.4.
+    pub sent_bytes: u64,
+    /// QUIC packets lost on all paths.
+    pub lost_packets: u64,
+    /// QUIC payload bytes lost on all paths.
+    pub lost_bytes: u64,
 }
 
 impl SendStream {
@@ -185,6 +193,10 @@ impl Connection {
             udp_tx_bytes: s.udp_tx.bytes,
             udp_rx_datagrams: s.udp_rx.datagrams,
             udp_rx_bytes: s.udp_rx.bytes,
+            sent_packets: s.sent_packets,
+            sent_bytes: s.sent_bytes,
+            lost_packets: s.lost_packets,
+            lost_bytes: s.lost_bytes,
         }
     }
 
