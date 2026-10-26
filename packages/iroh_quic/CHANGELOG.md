@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
 - **iroh 1.4.1:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.4.1.
   iroh 1.4 has no breaking API changes. It brings bug fixes: pkarr requests use the

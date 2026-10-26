@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
 - Builds the native core against iroh 1.4.1 and exposes the new connection counters
   (`ConnectionStats.sentPackets`, `sentBytes`, `lostPackets`, `lostBytes`); see the `iroh_quic`
