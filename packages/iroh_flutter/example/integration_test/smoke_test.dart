@@ -24,7 +24,7 @@ void main() {
 
   testWidgets('native library loads and ABI handshake passes', (tester) async {
     await Iroh.init();
-    expect(Iroh.abiVersion, 2);
+    expect(Iroh.abiVersion, 3);
     expect(Iroh.irohVersion, isNotEmpty);
     expect(Iroh.capabilities.direct, isTrue);
   });

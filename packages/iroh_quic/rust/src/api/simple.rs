@@ -6,7 +6,7 @@
 
 /// The current ABI version of the FFI API of this crate. The Dart side does not run if its
 /// expected version is different. See `lib/src/ffi/loader.dart`.
-pub const IROHDART_ABI_VERSION: u32 = 2;
+pub const IROHDART_ABI_VERSION: u32 = 3;
 
 /// Returns the ABI version that is compiled into this native library.
 ///
@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn abi_version_is_pinned() {
-        assert_eq!(irohdart_abi_version(), 2);
-        assert_eq!(IROHDART_ABI_VERSION, 2);
+        assert_eq!(irohdart_abi_version(), 3);
+        assert_eq!(IROHDART_ABI_VERSION, 3);
     }
 }

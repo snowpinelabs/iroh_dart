@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **iroh 1.4.1:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.4.1.
+  iroh 1.4 has no breaking API changes. It brings bug fixes: pkarr requests use the
+  endpoint's proxy, net_report probes do not use the environment's proxy, local addresses update
+  on network change, relay receive retries after message drops, and correct proxy credentials.
+  It also adds a timeout on captive portal checks and support for IPv6 literal relay URLs.
+- New `ConnectionStats.sentPackets` and `ConnectionStats.sentBytes`: the QUIC packets and payload
+  bytes sent on all paths. Also new `ConnectionStats.lostPackets` and `ConnectionStats.lostBytes`.
+- **ABI version 3.** The FFI shape of `ConnStats` changed, so the Dart bindings refuse a native
+  library built for ABI 2. Rebuild the native library or re-run `dart run iroh_quic:setup`.
+
 ## 1.2.0
 
 - Version bump in lockstep with `iroh_flutter` 1.2.0, which adds Swift Package Manager support on

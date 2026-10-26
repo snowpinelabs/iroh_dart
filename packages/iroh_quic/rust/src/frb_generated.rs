@@ -3296,11 +3296,19 @@ impl SseDecode for crate::api::connection::ConnStats {
         let mut var_udpTxBytes = <u64>::sse_decode(deserializer);
         let mut var_udpRxDatagrams = <u64>::sse_decode(deserializer);
         let mut var_udpRxBytes = <u64>::sse_decode(deserializer);
+        let mut var_sentPackets = <u64>::sse_decode(deserializer);
+        let mut var_sentBytes = <u64>::sse_decode(deserializer);
+        let mut var_lostPackets = <u64>::sse_decode(deserializer);
+        let mut var_lostBytes = <u64>::sse_decode(deserializer);
         return crate::api::connection::ConnStats {
             udp_tx_datagrams: var_udpTxDatagrams,
             udp_tx_bytes: var_udpTxBytes,
             udp_rx_datagrams: var_udpRxDatagrams,
             udp_rx_bytes: var_udpRxBytes,
+            sent_packets: var_sentPackets,
+            sent_bytes: var_sentBytes,
+            lost_packets: var_lostPackets,
+            lost_bytes: var_lostBytes,
         };
     }
 }
@@ -3819,6 +3827,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::connection::ConnStats {
             self.udp_tx_bytes.into_into_dart().into_dart(),
             self.udp_rx_datagrams.into_into_dart().into_dart(),
             self.udp_rx_bytes.into_into_dart().into_dart(),
+            self.sent_packets.into_into_dart().into_dart(),
+            self.sent_bytes.into_into_dart().into_dart(),
+            self.lost_packets.into_into_dart().into_dart(),
+            self.lost_bytes.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -4115,6 +4127,10 @@ impl SseEncode for crate::api::connection::ConnStats {
         <u64>::sse_encode(self.udp_tx_bytes, serializer);
         <u64>::sse_encode(self.udp_rx_datagrams, serializer);
         <u64>::sse_encode(self.udp_rx_bytes, serializer);
+        <u64>::sse_encode(self.sent_packets, serializer);
+        <u64>::sse_encode(self.sent_bytes, serializer);
+        <u64>::sse_encode(self.lost_packets, serializer);
+        <u64>::sse_encode(self.lost_bytes, serializer);
     }
 }
 

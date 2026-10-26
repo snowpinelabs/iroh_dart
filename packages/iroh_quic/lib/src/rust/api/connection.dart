@@ -131,23 +131,46 @@ abstract class SendStream implements RustOpaqueInterface {
   Future<void> writeAll({required List<int> data});
 }
 
-/// A snapshot of some UDP counters of a connection.
+/// A snapshot of some UDP and QUIC counters of a connection.
 class ConnStats {
   final BigInt udpTxDatagrams;
   final BigInt udpTxBytes;
   final BigInt udpRxDatagrams;
   final BigInt udpRxBytes;
 
+  /// QUIC packets sent on all paths. Since iroh 1.4.
+  final BigInt sentPackets;
+
+  /// QUIC payload bytes sent on all paths. Since iroh 1.4.
+  final BigInt sentBytes;
+
+  /// QUIC packets lost on all paths.
+  final BigInt lostPackets;
+
+  /// QUIC payload bytes lost on all paths.
+  final BigInt lostBytes;
+
   const ConnStats({
     required this.udpTxDatagrams,
     required this.udpTxBytes,
     required this.udpRxDatagrams,
     required this.udpRxBytes,
+    required this.sentPackets,
+    required this.sentBytes,
+    required this.lostPackets,
+    required this.lostBytes,
   });
 
   @override
   int get hashCode =>
-      udpTxDatagrams.hashCode ^ udpTxBytes.hashCode ^ udpRxDatagrams.hashCode ^ udpRxBytes.hashCode;
+      udpTxDatagrams.hashCode ^
+      udpTxBytes.hashCode ^
+      udpRxDatagrams.hashCode ^
+      udpRxBytes.hashCode ^
+      sentPackets.hashCode ^
+      sentBytes.hashCode ^
+      lostPackets.hashCode ^
+      lostBytes.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -157,5 +180,9 @@ class ConnStats {
           udpTxDatagrams == other.udpTxDatagrams &&
           udpTxBytes == other.udpTxBytes &&
           udpRxDatagrams == other.udpRxDatagrams &&
-          udpRxBytes == other.udpRxBytes;
+          udpRxBytes == other.udpRxBytes &&
+          sentPackets == other.sentPackets &&
+          sentBytes == other.sentBytes &&
+          lostPackets == other.lostPackets &&
+          lostBytes == other.lostBytes;
 }

@@ -2363,12 +2363,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ConnStats dco_decode_conn_stats(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 8) throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return ConnStats(
       udpTxDatagrams: dco_decode_u_64(arr[0]),
       udpTxBytes: dco_decode_u_64(arr[1]),
       udpRxDatagrams: dco_decode_u_64(arr[2]),
       udpRxBytes: dco_decode_u_64(arr[3]),
+      sentPackets: dco_decode_u_64(arr[4]),
+      sentBytes: dco_decode_u_64(arr[5]),
+      lostPackets: dco_decode_u_64(arr[6]),
+      lostBytes: dco_decode_u_64(arr[7]),
     );
   }
 
@@ -2893,11 +2897,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_udpTxBytes = sse_decode_u_64(deserializer);
     var var_udpRxDatagrams = sse_decode_u_64(deserializer);
     var var_udpRxBytes = sse_decode_u_64(deserializer);
+    var var_sentPackets = sse_decode_u_64(deserializer);
+    var var_sentBytes = sse_decode_u_64(deserializer);
+    var var_lostPackets = sse_decode_u_64(deserializer);
+    var var_lostBytes = sse_decode_u_64(deserializer);
     return ConnStats(
       udpTxDatagrams: var_udpTxDatagrams,
       udpTxBytes: var_udpTxBytes,
       udpRxDatagrams: var_udpRxDatagrams,
       udpRxBytes: var_udpRxBytes,
+      sentPackets: var_sentPackets,
+      sentBytes: var_sentBytes,
+      lostPackets: var_lostPackets,
+      lostBytes: var_lostBytes,
     );
   }
 
@@ -3477,6 +3489,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_64(self.udpTxBytes, serializer);
     sse_encode_u_64(self.udpRxDatagrams, serializer);
     sse_encode_u_64(self.udpRxBytes, serializer);
+    sse_encode_u_64(self.sentPackets, serializer);
+    sse_encode_u_64(self.sentBytes, serializer);
+    sse_encode_u_64(self.lostPackets, serializer);
+    sse_encode_u_64(self.lostBytes, serializer);
   }
 
   @protected

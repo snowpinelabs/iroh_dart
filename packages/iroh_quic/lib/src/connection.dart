@@ -25,6 +25,10 @@ final class Connection {
       udpTxBytes: s.udpTxBytes.toInt(),
       udpRxDatagrams: s.udpRxDatagrams.toInt(),
       udpRxBytes: s.udpRxBytes.toInt(),
+      sentPackets: s.sentPackets.toInt(),
+      sentBytes: s.sentBytes.toInt(),
+      lostPackets: s.lostPackets.toInt(),
+      lostBytes: s.lostBytes.toInt(),
     );
   }
 
@@ -117,6 +121,10 @@ final class ConnectionStats {
     required this.udpTxBytes,
     required this.udpRxDatagrams,
     required this.udpRxBytes,
+    this.sentPackets = 0,
+    this.sentBytes = 0,
+    this.lostPackets = 0,
+    this.lostBytes = 0,
   });
 
   /// Datagrams sent at the UDP layer.
@@ -131,10 +139,24 @@ final class ConnectionStats {
   /// Bytes received at the UDP layer.
   final int udpRxBytes;
 
+  /// QUIC packets sent on all paths. One UDP datagram can contain more than one QUIC packet.
+  final int sentPackets;
+
+  /// QUIC payload bytes sent on all paths. This value does not include the UDP and IP headers.
+  final int sentBytes;
+
+  /// QUIC packets lost on all paths.
+  final int lostPackets;
+
+  /// QUIC payload bytes lost on all paths.
+  final int lostBytes;
+
   @override
   String toString() =>
       'ConnectionStats(txDatagrams: $udpTxDatagrams, '
-      'txBytes: $udpTxBytes, rxDatagrams: $udpRxDatagrams, rxBytes: $udpRxBytes)';
+      'txBytes: $udpTxBytes, rxDatagrams: $udpRxDatagrams, rxBytes: $udpRxBytes, '
+      'sentPackets: $sentPackets, sentBytes: $sentBytes, '
+      'lostPackets: $lostPackets, lostBytes: $lostBytes)';
 }
 
 Future<T> _connWrap<T>(Future<T> Function() body) async {

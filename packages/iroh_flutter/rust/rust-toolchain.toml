@@ -1,4 +1,4 @@
-# The minimum supported Rust version of iroh 1.3 is 1.91, and iroh uses edition 2024.
+# The minimum supported Rust version of iroh 1.4 is 1.91, and iroh uses edition 2024.
 # This file pins a tested stable release at or above 1.91, so the edition 2024 dependencies always
 # compile.
 [toolchain]

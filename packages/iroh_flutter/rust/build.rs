@@ -13,8 +13,8 @@ fn main() {
     let version = std::fs::read_to_string(&lock_path)
         .ok()
         .and_then(|lock| iroh_version_from_lock(&lock))
-        // If the build script cannot read the lockfile, it uses the fixed value "1.3".
-        .unwrap_or_else(|| "1.3".to_string());
+        // If the build script cannot read the lockfile, it uses the fixed value "1.4".
+        .unwrap_or_else(|| "1.4".to_string());
 
     println!("cargo:rustc-env=IROH_CRATE_VERSION={version}");
 }
