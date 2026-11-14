@@ -6,6 +6,7 @@
 //! use, and the runtime stays until the process stops. FRB and Dart do not own the runtime.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use tokio::runtime::{Builder, Runtime};
@@ -23,7 +24,18 @@ pub(crate) fn rt() -> &'static Runtime {
     })
 }
 
-/// Returns the registry of live FRB stream tasks. The key of each entry is the token from Dart.
+/// Returns a new stream token. Each call returns a different value for the full process.
+///
+/// The registry of stream tasks is shared by all Dart isolates. Thus the tokens must come from one
+/// counter in the process. A counter in each Dart isolate can give the same token two times. Then
+/// one stream can replace or stop the registry entry of a different stream.
+pub(crate) fn next_stream_token() -> u64 {
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Returns the registry of live FRB stream tasks. The key of each entry is a token from
+/// [`next_stream_token`].
 ///
 /// An iroh watcher stream waits in `next().await` until the last `Endpoint` clone drops.
 /// A path event stream waits until the connection closes. Thus a stream task cannot see a

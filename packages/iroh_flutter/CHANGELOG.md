@@ -4,6 +4,8 @@
 
 - **Android:** fix the build failure with `compileSdk 37`. Recent Android tooling names this
   platform `android-37.0`, and the CargoKit Gradle plugin failed to parse it as an integer.
+- **Release builds no longer abort on a Rust panic,** and stream tokens no longer collide across
+  isolates; see the `iroh_quic` changelog. ABI version 4.
 
 ## 1.3.0
 

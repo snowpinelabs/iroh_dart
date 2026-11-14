@@ -12,6 +12,14 @@
 use flutter_rust_bridge::frb;
 use iroh::endpoint::PathEvent;
 
+/// Returns a new token for a reactive stream. Each call returns a different value for the full
+/// process, also across Dart isolates. Give this token to the stream function and to
+/// [`cancel_stream`].
+#[frb(sync)]
+pub fn new_stream_token() -> u64 {
+    crate::runtime::next_stream_token()
+}
+
 /// Cancels a reactive stream by its token. The reactive streams are `watchAddr`,
 /// `homeRelayStatus`, and `pathEvents`. The `onCancel` handler of the Dart subscription calls this
 /// function. The stream task then stops and releases its iroh watcher or event stream

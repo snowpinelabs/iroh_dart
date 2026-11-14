@@ -70,14 +70,13 @@ strip = "debuginfo"
 
 [profile.release]
 # This profile makes the native library small.
-# Note: with `panic = "abort"`, a Rust panic stops the process.
-# FRB cannot catch the panic with `catch_unwind` and give it to Dart as an exception.
-# Release builds accept this cost because the native library becomes smaller.
-# Test and dev builds use the default `unwind`. Thus the conformance tests can catch panics as
-# failures. If malformed peer input can cause a panic and production needs a clean error, change
-# this value.
+# The profile keeps `panic = "unwind"`, the default value. A Rust panic in an FFI call then becomes
+# a Dart exception, and the process continues. Each async FFI call runs in a tokio task, and the
+# task returns the panic as an error. FRB catches a panic in a sync call.
+# With `panic = "abort"`, the library is smaller, but a panic in the iroh stack stops the app
+# immediately. The app then shows no Dart error and no log.
 opt-level = "z"
 lto = "fat"
 codegen-units = 1
-panic = "abort"
+panic = "unwind"
 strip = "symbols"

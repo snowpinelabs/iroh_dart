@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1028579327;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1267195733;
 
 // Section: executor
 
@@ -2585,6 +2585,35 @@ fn wire__crate__api__simple__irohdart_iroh_version_impl(
         },
     )
 }
+fn wire__crate__api__watch__new_stream_token_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "new_stream_token",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::watch::new_stream_token())?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__key__public_key_check_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -3654,7 +3683,7 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        60 => wire__crate__api__router__router_builder_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__router__router_builder_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3697,17 +3726,18 @@ fn pde_ffi_dispatcher_sync_impl(
         47 => wire__crate__api__key__endpoint_addr_round_trip_impl(ptr, rust_vec_len, data_len),
         50 => wire__crate__api__simple__irohdart_abi_version_impl(ptr, rust_vec_len, data_len),
         51 => wire__crate__api__simple__irohdart_iroh_version_impl(ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__key__public_key_check_impl(ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__key__public_key_fmt_short_impl(ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__key__public_key_from_hex_impl(ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__key__public_key_from_z32_impl(ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__key__public_key_to_hex_impl(ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__key__public_key_to_z32_impl(ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__key__public_key_verify_impl(ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__key__relay_url_parse_impl(ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__key__secret_key_generate_impl(ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__key__secret_key_public_impl(ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__key__secret_key_sign_impl(ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__watch__new_stream_token_impl(ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__key__public_key_check_impl(ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__key__public_key_fmt_short_impl(ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__key__public_key_from_hex_impl(ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__key__public_key_from_z32_impl(ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__key__public_key_to_hex_impl(ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__key__public_key_to_z32_impl(ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__key__public_key_verify_impl(ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__key__relay_url_parse_impl(ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__key__secret_key_generate_impl(ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__key__secret_key_public_impl(ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__key__secret_key_sign_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
