@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:iroh_flutter/iroh_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Example app for the plugin. On a real device, it shows that the native library loads and passes
 /// the ABI version check. It also shows that the async runtime drives iroh. Two endpoints in one
