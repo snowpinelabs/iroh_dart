@@ -1,11 +1,15 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
 
 - **Android:** fix the build failure with `compileSdk 37`. Recent Android tooling names this
-  platform `android-37.0`, and the CargoKit Gradle plugin failed to parse it as an integer.
+  platform `android-37.0`, and the CargoKit Gradle plugin failed to parse it as an integer
+  ([#32](https://github.com/snowpinelabs/iroh_dart/issues/32)).
 - **Release builds no longer abort on a Rust panic,** and stream tokens no longer collide across
   isolates; see the `iroh_quic` changelog. ABI version 4.
+- **Example app:** supports Flutter 3.50. It uses Gradle 9.3.1, Android Gradle Plugin 9.1.1, and
+  `package:material_ui`, so it needs Flutter 3.47 or later. The plugin itself does not change its
+  Flutter requirement.
 
 ## 1.3.0
 

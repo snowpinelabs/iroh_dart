@@ -1,13 +1,15 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
 
 - **Release builds no longer abort on a Rust panic.** The native library now builds with
   `panic = "unwind"`. A panic in the iroh stack becomes a Dart exception; before, it stopped the
-  process with SIGABRT and showed no Dart error and no log.
+  process with SIGABRT and showed no Dart error and no log. The native library is about 1.5 MB
+  larger ([#31](https://github.com/snowpinelabs/iroh_dart/issues/31)).
 - Fix: stream tokens for `watchAddr`, `homeRelayStatus`, and `pathEvents` come from the native
   library. Before, each isolate counted from 1. Two isolates could then use the same token, and one
-  isolate could cancel the stream of the other or make it impossible to cancel.
+  isolate could cancel the stream of the other or make it impossible to cancel
+  ([#31](https://github.com/snowpinelabs/iroh_dart/issues/31)).
 - **ABI version 4.** The FFI API has the new function `newStreamToken`, so the Dart bindings
   refuse a native library built for ABI 3. Rebuild the native library or re-run
   `dart run iroh_quic:setup`.
