@@ -29,8 +29,9 @@ abstract class CargoKitBuildTask extends DefaultTask {
     @Input
     String sdkDirectory
 
+    // The value is a string because the platform name can be "android-37.0" or a preview codename.
     @Input
-    int compileSdkVersion;
+    String compileSdkVersion;
 
     @Input
     int minSdkVersion;
@@ -110,6 +111,14 @@ class CargoKitPlugin implements Plugin<Project> {
         return null;
     }
 
+    // Return the API level of a platform name such as "android-37" or "android-37.0".
+    // If the name has no API level, return the text after "android-".
+    private static String parseCompileSdkVersion(String compileSdkVersion) {
+        def name = compileSdkVersion.startsWith("android-") ? compileSdkVersion.substring(8) : compileSdkVersion
+        def match = name =~ /^(\d+)/
+        return match.find() ? match.group(1) : name
+    }
+
     @Override
     void apply(Project project) {
         def plugin = findFlutterPlugin(project.rootProject);
@@ -163,7 +172,7 @@ class CargoKitPlugin implements Plugin<Project> {
                     ndkVersion = plugin.project.android.ndkVersion
                     sdkDirectory = plugin.project.android.sdkDirectory
                     minSdkVersion = plugin.project.android.defaultConfig.minSdkVersion.apiLevel as int
-                    compileSdkVersion = plugin.project.android.compileSdkVersion.substring(8) as int
+                    compileSdkVersion = parseCompileSdkVersion(plugin.project.android.compileSdkVersion)
                     targetPlatforms = platforms
                     pluginFile = CargoKitPlugin.file
                 }
