@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Android:** fix the build failure with `compileSdk 37`. Recent Android tooling names this
+  platform `android-37.0`, and the CargoKit Gradle plugin failed to parse it as an integer.
+
 ## 1.3.0
 
 - Builds the native core against iroh 1.4.1 and exposes the new connection counters
