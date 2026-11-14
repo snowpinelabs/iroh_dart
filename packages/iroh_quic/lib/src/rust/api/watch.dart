@@ -8,6 +8,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `map_path_event`
 
+/// Returns a new token for a reactive stream. Each call returns a different value for the full
+/// process, also across Dart isolates. Give this token to the stream function and to
+/// [`cancel_stream`].
+BigInt newStreamToken() => RustLib.instance.api.crateApiWatchNewStreamToken();
+
 /// Cancels a reactive stream by its token. The reactive streams are `watchAddr`,
 /// `homeRelayStatus`, and `pathEvents`. The `onCancel` handler of the Dart subscription calls this
 /// function. The stream task then stops and releases its iroh watcher or event stream

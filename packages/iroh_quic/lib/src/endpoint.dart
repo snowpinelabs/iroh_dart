@@ -29,16 +29,15 @@ EndpointAddr _addrFromParts(ffi_key.EndpointAddrParts parts) => EndpointAddr(
   ipAddrs: parts.ipAddrs,
 );
 
-int _streamTokenCounter = 0;
-
 /// Wraps an FRB stream. The Rust task behind the stream cannot see a Dart cancel by itself.
 /// When you cancel the returned subscription, this wrapper calls `cancelStream` with the token.
 /// The crate then stops the Rust task immediately, and no resources stay in use.
+/// The token comes from the crate, because the registry of stream tasks is shared by all isolates.
 Stream<R> _cancellableStream<T, R>(
   Stream<T> Function(BigInt token) create,
   R Function(T value) convert,
 ) {
-  final token = BigInt.from(++_streamTokenCounter);
+  final token = ffi_watch.newStreamToken();
   late StreamController<R> controller;
   StreamSubscription<T>? sub;
   controller = StreamController<R>(
