@@ -5,7 +5,7 @@ version: 0.1.0
 
 environment:
   sdk: ^3.12.0
-  flutter: ">=3.27.0"
+  flutter: ">=3.47.0"
 
 # This app is a member of the pub workspace. Thus, `flutter pub get` at the repository root
 # resolves iroh_flutter to the local plugin.
@@ -15,6 +15,7 @@ dependencies:
   flutter:
     sdk: flutter
   iroh_flutter: ^1.3.0
+  material_ui: ^1.11.0
 
 dev_dependencies:
   flutter_test:
