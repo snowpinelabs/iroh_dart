@@ -195,7 +195,7 @@ jobs:
     needs: prebuilt
     permissions:
       id-token: write   # OIDC authentication requires this permission.
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1.8.1
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1.8.2
     with:
       environment: pub.dev
       working-directory: packages/iroh_quic
@@ -225,7 +225,7 @@ jobs:
     needs: [wait-for-pub-dev-index, verify-flutter-native-mirror]
     permissions:
       id-token: write   # OIDC authentication requires this permission.
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1.8.1
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1.8.2
     with:
       environment: pub.dev
       working-directory: packages/iroh_flutter
