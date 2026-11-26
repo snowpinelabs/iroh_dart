@@ -2,14 +2,14 @@
 
 ## 1.5.0
 
-- **iroh 1.5.0:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.5.0
-  (through iroh 1.4.2). iroh 1.5 has no breaking API changes. It brings relay fixes: a relay URL
+- **iroh 1.5.0:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.5.0.
+  It has no breaking API changes. It brings relay fixes: a relay URL
   keeps its path prefix, so a relay server can run below a path. An empty or bad datagram no
   longer disconnects the receiver. The relay server does not leak connections in the handshake,
   and the debug log does not show proxy credentials.
 - **Stream affinity:** new `SendStream.setAffinity` with the sealed `StreamAffinity`
   (`StreamAffinity.any`, `StreamAffinity.sticky(pathId)`, `StreamAffinity.block`). A sticky stream
-  sends its data only on one network path, for example a direct path and never the relay.
+  sends its data only on one network path, for example, a direct path and never the relay.
   `setAffinity` does not wait for a `writeAll` that is in progress.
 - **Network paths:** new `Connection.paths` (a snapshot of `PathInfo` values) and
   `Connection.pathsStream()`. A `PathInfo` has its `PathId`, its remote address, `isIp`,
