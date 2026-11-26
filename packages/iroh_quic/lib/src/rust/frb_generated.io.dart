@@ -185,6 +185,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<EndpointAddrParts> dco_decode_StreamSink_endpoint_addr_parts_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<List<PathInfo>> dco_decode_StreamSink_list_path_info_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<List<RelayStatusInfo>> dco_decode_StreamSink_list_relay_status_info_Sse(
     dynamic raw,
   );
@@ -214,6 +217,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   EndpointAddrParts dco_decode_box_autoadd_endpoint_addr_parts(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
   BigInt dco_decode_box_autoadd_u_64(dynamic raw);
 
   @protected
@@ -233,6 +239,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<PathInfo> dco_decode_list_path_info(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -262,6 +271,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   EndpointAddrParts? dco_decode_opt_box_autoadd_endpoint_addr_parts(dynamic raw);
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+
+  @protected
   BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
 
   @protected
@@ -274,6 +286,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PathEventKind dco_decode_path_event_kind(dynamic raw);
 
   @protected
+  PathInfo dco_decode_path_info(dynamic raw);
+
+  @protected
   (SendStream, RecvStream)
   dco_decode_record_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_send_stream_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_recv_stream(
     dynamic raw,
@@ -281,6 +296,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RelayStatusInfo dco_decode_relay_status_info(dynamic raw);
+
+  @protected
+  StreamAffinityKind dco_decode_stream_affinity_kind(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -427,6 +445,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<List<PathInfo>> sse_decode_StreamSink_list_path_info_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<List<RelayStatusInfo>> sse_decode_StreamSink_list_relay_status_info_Sse(
     SseDeserializer deserializer,
   );
@@ -458,6 +481,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   EndpointAddrParts sse_decode_box_autoadd_endpoint_addr_parts(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
 
   @protected
@@ -477,6 +503,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Uint8List> sse_decode_list_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<PathInfo> sse_decode_list_path_info(SseDeserializer deserializer);
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -506,6 +535,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   EndpointAddrParts? sse_decode_opt_box_autoadd_endpoint_addr_parts(SseDeserializer deserializer);
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
   BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
 
   @protected
@@ -518,6 +550,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PathEventKind sse_decode_path_event_kind(SseDeserializer deserializer);
 
   @protected
+  PathInfo sse_decode_path_info(SseDeserializer deserializer);
+
+  @protected
   (SendStream, RecvStream)
   sse_decode_record_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_send_stream_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_recv_stream(
     SseDeserializer deserializer,
@@ -525,6 +560,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RelayStatusInfo sse_decode_relay_status_info(SseDeserializer deserializer);
+
+  @protected
+  StreamAffinityKind sse_decode_stream_affinity_kind(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -699,6 +737,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_list_path_info_Sse(
+    RustStreamSink<List<PathInfo>> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_list_relay_status_info_Sse(
     RustStreamSink<List<RelayStatusInfo>> self,
     SseSerializer serializer,
@@ -734,6 +778,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_endpoint_addr_parts(EndpointAddrParts self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
 
   @protected
@@ -753,6 +800,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_list_prim_u_8_strict(List<Uint8List> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_path_info(List<PathInfo> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -787,6 +837,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
 
   @protected
@@ -799,6 +852,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_path_event_kind(PathEventKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_path_info(PathInfo self, SseSerializer serializer);
+
+  @protected
   void
   sse_encode_record_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_send_stream_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_recv_stream(
     (SendStream, RecvStream) self,
@@ -807,6 +863,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_relay_status_info(RelayStatusInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_stream_affinity_kind(StreamAffinityKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

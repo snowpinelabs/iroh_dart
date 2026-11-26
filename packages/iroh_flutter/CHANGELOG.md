@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0
+
+- Builds the native core against iroh 1.5.0 and exposes stream affinity
+  (`SendStream.setAffinity`), the network paths of a connection (`Connection.paths`,
+  `pathsStream`), and the path wait helpers (`waitAnyPath`, `waitNoPath`, `waitPathClosed`); see
+  the `iroh_quic` changelog. ABI version 5.
+- **iOS:** the native build no longer limits `libc` to versions before 0.2.190. iroh 1.5 uses
+  `netdev` 0.47, which compiles on iOS with the latest `libc`.
+
 ## 1.4.0
 
 - **Android:** fix the build failure with `compileSdk 37`. Recent Android tooling names this

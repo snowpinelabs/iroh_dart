@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `map_path_event`
+// These functions are ignored because they are not marked as `pub`: `map_path_event`, `map_path_list`, `map_path`, `path_id_from_u32`, `path_id_to_u32`
 
 /// Returns a new token for a reactive stream. Each call returns a different value for the full
 /// process, also across Dart isolates. Give this token to the stream function and to
@@ -20,18 +20,21 @@ BigInt newStreamToken() => RustLib.instance.api.crateApiWatchNewStreamToken();
 void cancelStream({required BigInt token}) =>
     RustLib.instance.api.crateApiWatchCancelStream(token: token);
 
-/// A path lifecycle event of a connection, in flat form. `remote_addr` has a value for `Opened`,
-/// `Closed`, and `Selected`. `missed` has a value for `Lagged`. It is the number of events that
-/// the stream dropped.
+/// A path lifecycle event of a connection, in flat form. `path_id` and `remote_addr` have a value
+/// for `Opened`, `Closed`, and `Selected`. `missed` has a value for `Lagged`. It is the number of
+/// events that the stream dropped.
 class PathEventInfo {
   final PathEventKind kind;
+
+  /// The QUIC path ID. It is equal to [`PathInfo::path_id`] of the same path.
+  final int? pathId;
   final String? remoteAddr;
   final BigInt? missed;
 
-  const PathEventInfo({required this.kind, this.remoteAddr, this.missed});
+  const PathEventInfo({required this.kind, this.pathId, this.remoteAddr, this.missed});
 
   @override
-  int get hashCode => kind.hashCode ^ remoteAddr.hashCode ^ missed.hashCode;
+  int get hashCode => kind.hashCode ^ pathId.hashCode ^ remoteAddr.hashCode ^ missed.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -39,6 +42,7 @@ class PathEventInfo {
       other is PathEventInfo &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
+          pathId == other.pathId &&
           remoteAddr == other.remoteAddr &&
           missed == other.missed;
 }
@@ -46,6 +50,58 @@ class PathEventInfo {
 /// The kind of a [`PathEventInfo`]. `Unknown` holds each variant that a future iroh version adds to
 /// the `#[non_exhaustive]` iroh enum.
 enum PathEventKind { opened, closed, selected, lagged, unknown }
+
+/// An open network path of a connection, from one `PathList` snapshot.
+class PathInfo {
+  /// The QUIC path ID. A path ID is unique in its connection, and iroh does not use it again.
+  /// `SendStream::set_affinity` uses this value to select a path.
+  final int pathId;
+
+  /// The remote transport address, as debug text.
+  final String remoteAddr;
+
+  /// `true` if the path is a direct IP path.
+  final bool isIp;
+
+  /// `true` if the path goes through a relay server.
+  final bool isRelay;
+
+  /// `true` if the connection uses this path for application data at this time.
+  final bool isSelected;
+
+  /// The round-trip time estimate of the path, in microseconds.
+  final BigInt rttMicros;
+
+  const PathInfo({
+    required this.pathId,
+    required this.remoteAddr,
+    required this.isIp,
+    required this.isRelay,
+    required this.isSelected,
+    required this.rttMicros,
+  });
+
+  @override
+  int get hashCode =>
+      pathId.hashCode ^
+      remoteAddr.hashCode ^
+      isIp.hashCode ^
+      isRelay.hashCode ^
+      isSelected.hashCode ^
+      rttMicros.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PathInfo &&
+          runtimeType == other.runtimeType &&
+          pathId == other.pathId &&
+          remoteAddr == other.remoteAddr &&
+          isIp == other.isIp &&
+          isRelay == other.isRelay &&
+          isSelected == other.isSelected &&
+          rttMicros == other.rttMicros;
+}
 
 /// The connection status of one home relay server. A `homeRelayStatus` update contains a list of
 /// these values.
