@@ -159,6 +159,10 @@ final class RelayUrl {
   final String value;
 
   /// Parses and normalizes a relay URL. Throws [IrohKeyException] if [url] is not valid.
+  ///
+  /// iroh adds a trailing `/` to a path that does not have one. iroh adds the relay paths below
+  /// this path, so a relay server can have a path prefix. For example,
+  /// `https://example.com/prefix` becomes `https://example.com/prefix/`.
   factory RelayUrl.parse(String url) =>
       RelayUrl._(_mapKeyErrors(() => ffi.relayUrlParse(url: url)));
 

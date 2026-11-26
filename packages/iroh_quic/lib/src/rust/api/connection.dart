@@ -43,6 +43,17 @@ abstract class Connection implements RustOpaqueInterface {
   /// to stop the task.
   Stream<PathEventInfo> pathEvents({required BigInt token});
 
+  /// Returns a snapshot of the open network paths of this connection.
+  List<PathInfo> paths();
+
+  /// Sends snapshots of the open network paths of this connection to `sink`. The first snapshot
+  /// shows the paths at the time of the call. Then a new snapshot comes each time the open paths
+  /// or the selected path change. The stream ends when the connection closes.
+  ///
+  /// `token` identifies the stream. The Dart subscription calls `cancel_stream` with this token
+  /// to stop the task.
+  Stream<List<PathInfo>> pathsStream({required BigInt token});
+
   /// Receives the next application datagram from the peer.
   Future<Uint8List> readDatagram();
 
@@ -126,6 +137,17 @@ abstract class SendStream implements RustOpaqueInterface {
   /// that the peer did not acknowledge.
   Future<void> reset({required int errorCode});
 
+  /// Sets the network paths that can carry the data of this stream.
+  ///
+  /// `Sticky` needs `path_id`, and only that path then carries the data. If that path closes,
+  /// the data stops until you set a different affinity. `Block` stops the data on all paths.
+  /// Blocked data still uses the send window of the connection, so do not write a lot of data to
+  /// a blocked stream. The affinity applies only to the data of the stream. The connection can
+  /// send other QUIC frames on all paths.
+  ///
+  /// Returns an error if `kind` is `Sticky` and `path_id` is `None`, or if the stream is closed.
+  void setAffinity({required StreamAffinityKind kind, int? pathId});
+
   /// Writes all of `data` to the stream. If flow control limits the stream, the function waits
   /// until it can send.
   Future<void> writeAll({required List<int> data});
@@ -185,4 +207,17 @@ class ConnStats {
           sentBytes == other.sentBytes &&
           lostPackets == other.lostPackets &&
           lostBytes == other.lostBytes;
+}
+
+/// The kind of a stream affinity. It selects the network paths that can carry the data of a send
+/// stream.
+enum StreamAffinityKind {
+  /// The connection selects the path. This is the default.
+  any,
+
+  /// Only the path with the given path ID carries the data of the stream.
+  sticky,
+
+  /// No path carries the data of the stream.
+  block,
 }

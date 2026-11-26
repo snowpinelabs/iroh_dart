@@ -12,9 +12,9 @@ void main() {
     await Iroh.init();
   });
 
-  test('native runtime initialises and reports ABI v4', () {
+  test('native runtime initialises and reports ABI v5', () {
     expect(Iroh.isInitialised, isTrue);
-    expect(Iroh.abiVersion, 4);
+    expect(Iroh.abiVersion, 5);
   });
 
   test('built against an iroh 1.x core', () {

@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.5.0
+
+- **iroh 1.5.0:** the Rust core now builds against `iroh` / `iroh-base` / `iroh-dns` 1.5.0
+  (through iroh 1.4.2). iroh 1.5 has no breaking API changes. It brings relay fixes: a relay URL
+  keeps its path prefix, so a relay server can run below a path. An empty or bad datagram no
+  longer disconnects the receiver. The relay server does not leak connections in the handshake,
+  and the debug log does not show proxy credentials.
+- **Stream affinity:** new `SendStream.setAffinity` with the sealed `StreamAffinity`
+  (`StreamAffinity.any`, `StreamAffinity.sticky(pathId)`, `StreamAffinity.block`). A sticky stream
+  sends its data only on one network path, for example a direct path and never the relay.
+  `setAffinity` does not wait for a `writeAll` that is in progress.
+- **Network paths:** new `Connection.paths` (a snapshot of `PathInfo` values) and
+  `Connection.pathsStream()`. A `PathInfo` has its `PathId`, its remote address, `isIp`,
+  `isRelay`, `isSelected`, and `rtt`.
+- **Path wait helpers** from iroh 1.5: new `Connection.waitAnyPath`, `Connection.waitNoPath`, and
+  `Connection.waitPathClosed`. Each examines the current paths first, and returns `null` if the
+  connection closes first.
+- `PathOpened`, `PathClosed`, and `PathSelected` have the new field `id`, the `PathId` of the path.
+- `RelayUrl.parse` adds a trailing `/` to a URL path that does not have one, as iroh 1.5 does.
+  For example, `https://example.com/prefix` becomes `https://example.com/prefix/`.
+- **ABI version 5.** The FFI shape of `PathEventInfo` changed, so the Dart bindings refuse a native
+  library built for ABI 4. Rebuild the native library or re-run `dart run iroh_quic:setup`.
+
 ## 1.4.0
 
 - **Release builds no longer abort on a Rust panic.** The native library now builds with

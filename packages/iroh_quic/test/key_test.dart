@@ -120,6 +120,25 @@ void main() {
       expect(url.value, contains('relay.example.com'));
     });
 
+    test('a relay URL path gets a trailing slash (iroh 1.5)', () {
+      expect(
+        RelayUrl.parse('https://relay.example.com/prefix').value,
+        'https://relay.example.com/prefix/',
+      );
+      expect(
+        RelayUrl.parse('https://relay.example.com/prefix/').value,
+        'https://relay.example.com/prefix/',
+      );
+      expect(RelayUrl.parse('https://relay.example.com').value, 'https://relay.example.com/');
+      final addr = EndpointAddr(
+        SecretKey.generate().publicKey,
+      ).withRelayUrl(RelayUrl.parse('https://relay.example.com/prefix'));
+      expect(
+        EndpointAddr.decode(addr.encode()).relayUrls.single.value,
+        'https://relay.example.com/prefix/',
+      );
+    });
+
     test('invalid relay URL throws IrohKeyException', () {
       expect(() => RelayUrl.parse('not a url'), throwsA(isA<IrohKeyException>()));
     });

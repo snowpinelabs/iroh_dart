@@ -105,8 +105,13 @@ pass `await Iroh.init(libraryPath: '/path/to/libirohdart_ffi.so')` for any locat
   `boundSockets`, `addr`, `connect`, `accept`, `acceptIncoming`.
 - **Connection & streams** - `openBi`/`openUni`/`acceptBi`/`acceptUni`, datagrams
   (`sendDatagram`/`readDatagram` and the batch `sendManyDatagrams`/`readManyDatagrams`), `stats`,
-  `remoteId`, `alpn`, `closed`; `SendStream` (`writeAll`/`finish`/`reset`),
+  `remoteId`, `alpn`, `closed`; `SendStream` (`writeAll`/`finish`/`reset`/`setAffinity`),
   `RecvStream` (`read`/`readExact`/`readToEnd`/`stop`).
+- **Network paths** - `Connection.paths` (a snapshot of `PathInfo`: `id`, `remoteAddr`, `isIp`,
+  `isRelay`, `isSelected`, `rtt`), `Connection.pathsStream()`, and the wait helpers
+  `waitAnyPath`/`waitNoPath`/`waitPathClosed`.
+- **Stream affinity** - `SendStream.setAffinity(StreamAffinity.sticky(pathId))` keeps the data of
+  a stream on one path; `StreamAffinity.block` and `StreamAffinity.any` stop or release it.
 - **Accept filter** - `Incoming` (`remoteAddr`, `accept`/`refuse`/`retry`/`ignore`).
 - **Reactive streams** - `Endpoint.watchAddr()`, `Endpoint.homeRelayStatus()` (`RelayStatus`
   with `lastError` and `authDeniedReason`), `Connection.pathEvents()` (sealed `PathEvent`).
@@ -117,6 +122,37 @@ pass `await Iroh.init(libraryPath: '/path/to/libirohdart_ffi.so')` for any locat
 
 > **Lazy-stream footgun:** a freshly opened `SendStream` is invisible to the peer until the first
 > `writeAll`.
+
+### Keep a stream off the relay
+
+iroh 1.5 can pin the data of a stream to one network path. To send data only on a direct path,
+wait for that path before you open the stream, and follow the path when it closes:
+
+```dart
+var direct = (await conn.waitAnyPath((p) => p.isIp))!.id;
+final send = await conn.openUni();
+send.setAffinity(StreamAffinity.sticky(direct));
+
+// Follow the direct path. If no direct path is open, block the stream until one opens.
+unawaited(() async {
+  while (true) {
+    final paths = await conn.waitPathClosed(direct);
+    if (paths == null) return; // The connection closed.
+    final next = paths.where((p) => p.isIp).firstOrNull;
+    if (next == null) send.setAffinity(StreamAffinity.block);
+    final path = next ?? await conn.waitAnyPath((p) => p.isIp);
+    if (path == null) return;
+    direct = path.id;
+    send.setAffinity(StreamAffinity.sticky(direct));
+  }
+}());
+
+await send.writeAll(data); // Waits while the stream is blocked.
+await send.finish();
+```
+
+Blocked data still uses the send window of the connection, so use `StreamAffinity.block` only as a
+last resort. This is the iroh `stream_affinity_direct` example in Dart.
 
 Run the bundled headless example (`dart run`, no Flutter):
 

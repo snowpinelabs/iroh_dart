@@ -103,15 +103,75 @@ final class Connection {
   /// that sends the events stops.
   Stream<PathEvent> pathEvents() =>
       _cancellableStream((token) => _inner.pathEvents(token: token), _pathEventFromInfo);
+
+  /// Returns a snapshot of the open network paths of this connection. The list does not change
+  /// when the paths change. Use [pathsStream] to see the changes.
+  List<PathInfo> get paths => _pathListFromInfo(_inner.paths());
+
+  /// Returns a [Stream] of snapshots of the open network paths of this connection.
+  ///
+  /// The first snapshot shows the paths at the time of the subscription. Then a new snapshot
+  /// comes each time the open paths or the selected path change. The stream closes when the
+  /// connection closes. When you cancel the subscription, the Rust task that sends the snapshots
+  /// stops.
+  Stream<List<PathInfo>> pathsStream() =>
+      _cancellableStream((token) => _inner.pathsStream(token: token), _pathListFromInfo);
+
+  /// Waits until an open path agrees with [test], and returns that path. This method examines
+  /// the current paths first. Returns `null` if the connection closes first.
+  ///
+  /// This is the iroh `PathListStream::wait_any` helper. For example, use
+  /// `waitAnyPath((p) => p.isIp)` to wait for a direct path.
+  Future<PathInfo?> waitAnyPath(bool Function(PathInfo path) test) async {
+    await for (final paths in pathsStream()) {
+      for (final path in paths) {
+        if (test(path)) return path;
+      }
+    }
+    return null;
+  }
+
+  /// Waits until no open path agrees with [test], and returns the snapshot of the open paths.
+  /// This method examines the current paths first. Returns `null` if the connection closes first.
+  ///
+  /// This is the iroh `PathListStream::wait_none` helper.
+  Future<List<PathInfo>?> waitNoPath(bool Function(PathInfo path) test) async {
+    await for (final paths in pathsStream()) {
+      if (!paths.any(test)) return paths;
+    }
+    return null;
+  }
+
+  /// Waits until the path with [id] is closed, and returns the snapshot of the open paths. If the
+  /// path is already closed, the future completes with the current snapshot. Returns `null` if the
+  /// connection closes first.
+  ///
+  /// This is the iroh `PathListStream::wait_closed` helper. Use it to see when the path of a
+  /// sticky [StreamAffinity] closes.
+  Future<List<PathInfo>?> waitPathClosed(PathId id) => waitNoPath((path) => path.id == id);
 }
 
+PathId? _pathIdOrNull(int? value) => value == null ? null : PathId(value);
+
 PathEvent _pathEventFromInfo(ffi_watch.PathEventInfo e) => switch (e.kind) {
-  ffi_watch.PathEventKind.opened => PathOpened(e.remoteAddr ?? ''),
-  ffi_watch.PathEventKind.closed => PathClosed(e.remoteAddr ?? ''),
-  ffi_watch.PathEventKind.selected => PathSelected(e.remoteAddr ?? ''),
+  ffi_watch.PathEventKind.opened => PathOpened(e.remoteAddr ?? '', id: _pathIdOrNull(e.pathId)),
+  ffi_watch.PathEventKind.closed => PathClosed(e.remoteAddr ?? '', id: _pathIdOrNull(e.pathId)),
+  ffi_watch.PathEventKind.selected => PathSelected(e.remoteAddr ?? '', id: _pathIdOrNull(e.pathId)),
   ffi_watch.PathEventKind.lagged => PathLagged(e.missed?.toInt() ?? 0),
   ffi_watch.PathEventKind.unknown => const PathUnknown(),
 };
+
+PathInfo _pathInfoFromInfo(ffi_watch.PathInfo p) => PathInfo(
+  id: PathId(p.pathId),
+  remoteAddr: p.remoteAddr,
+  isIp: p.isIp,
+  isRelay: p.isRelay,
+  isSelected: p.isSelected,
+  rtt: Duration(microseconds: p.rttMicros.toInt()),
+);
+
+List<PathInfo> _pathListFromInfo(List<ffi_watch.PathInfo> paths) =>
+    List<PathInfo>.unmodifiable(paths.map(_pathInfoFromInfo));
 
 /// The values of some connection counters at one time. [Connection.stats] returns this object.
 final class ConnectionStats {

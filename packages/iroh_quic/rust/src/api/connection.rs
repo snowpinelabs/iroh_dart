@@ -6,6 +6,10 @@
 //! serializes concurrent access to a stream half. iroh futures borrow `&self` with a lifetime, but
 //! a spawned task must be `'static`. Thus each operation moves a clone of the `Arc`-backed
 //! `Connection` or stream half into its task.
+//!
+//! `SendStream` also keeps a second noq handle to the same QUIC stream. Calls such as
+//! `set_affinity` use this handle and do not lock the mutex. Thus they do not wait for a `write_all`
+//! that flow control or a blocked stream affinity stops.
 
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
@@ -19,7 +23,7 @@ use iroh::endpoint::{
 };
 use tokio::sync::Mutex;
 
-use crate::api::watch::{map_path_event, PathEventInfo};
+use crate::api::watch::{map_path_event, map_path_list, path_id_from_u32, PathEventInfo, PathInfo};
 use crate::frb_generated::StreamSink;
 use crate::runtime::rt;
 
@@ -33,7 +37,24 @@ pub struct Connection {
 #[frb(opaque)]
 pub struct SendStream {
     inner: Arc<Mutex<IrohSendStream>>,
+    /// A clone of the noq handle in `inner`, for the calls that need only `&self`.
+    ///
+    /// The `Drop` of each noq `SendStream` clone finishes the stream. Thus this field and `inner`
+    /// must drop together. Each operation keeps a borrow of this wrapper until its task completes,
+    /// so the wrapper cannot drop while a task uses a clone of `inner`.
+    control: IrohSendStream,
     id: u64,
+}
+
+/// The kind of a stream affinity. It selects the network paths that can carry the data of a send
+/// stream.
+pub enum StreamAffinityKind {
+    /// The connection selects the path. This is the default.
+    Any,
+    /// Only the path with the given path ID carries the data of the stream.
+    Sticky,
+    /// No path carries the data of the stream.
+    Block,
 }
 
 /// The receive half of a QUIC stream.
@@ -143,8 +164,10 @@ pub struct ConnStats {
 impl SendStream {
     pub(crate) fn wrap(inner: IrohSendStream) -> Self {
         let id: u64 = inner.id().into();
+        let control = inner.clone();
         SendStream {
             inner: Arc::new(Mutex::new(inner)),
+            control,
             id,
         }
     }
@@ -304,6 +327,32 @@ impl Connection {
         self.inner.close(VarInt::from_u32(error_code), &reason);
     }
 
+    /// Returns a snapshot of the open network paths of this connection.
+    #[frb(sync)]
+    pub fn paths(&self) -> Vec<PathInfo> {
+        map_path_list(&self.inner.paths())
+    }
+
+    /// Sends snapshots of the open network paths of this connection to `sink`. The first snapshot
+    /// shows the paths at the time of the call. Then a new snapshot comes each time the open paths
+    /// or the selected path change. The stream ends when the connection closes.
+    ///
+    /// `token` identifies the stream. The Dart subscription calls `cancel_stream` with this token
+    /// to stop the task.
+    pub fn paths_stream(&self, token: u64, sink: StreamSink<Vec<PathInfo>>) {
+        let conn = self.inner.clone();
+        let handle = rt().spawn(async move {
+            let mut stream = conn.paths_stream();
+            while let Some(paths) = stream.next().await {
+                if sink.add(map_path_list(&paths)).is_err() {
+                    break;
+                }
+            }
+            crate::runtime::unregister_stream(token);
+        });
+        crate::runtime::register_stream(token, handle.abort_handle());
+    }
+
     /// Sends the path lifecycle events of this connection to `sink`. The events are `Opened`,
     /// `Closed`, `Selected`, and `Lagged`. A `Selected` event shows a change between the relay path
     /// and a direct path. The stream ends when the connection closes.
@@ -347,6 +396,32 @@ impl SendStream {
         .await
         .map_err(|e| anyhow!("write_all task panicked: {e}"))??;
         Ok(())
+    }
+
+    /// Sets the network paths that can carry the data of this stream.
+    ///
+    /// `Sticky` needs `path_id`, and only that path then carries the data. If that path closes,
+    /// the data stops until you set a different affinity. `Block` stops the data on all paths.
+    /// Blocked data still uses the send window of the connection, so do not write a lot of data to
+    /// a blocked stream. The affinity applies only to the data of the stream. The connection can
+    /// send other QUIC frames on all paths.
+    ///
+    /// Returns an error if `kind` is `Sticky` and `path_id` is `None`, or if the stream is closed.
+    #[frb(sync)]
+    pub fn set_affinity(&self, kind: StreamAffinityKind, path_id: Option<u32>) -> Result<()> {
+        let affinity = match kind {
+            StreamAffinityKind::Any => noq::StreamAffinity::Any,
+            StreamAffinityKind::Block => noq::StreamAffinity::Block,
+            StreamAffinityKind::Sticky => {
+                let id =
+                    path_id.ok_or_else(|| anyhow!("a sticky stream affinity needs a path ID"))?;
+                noq::StreamAffinity::Sticky(path_id_from_u32(id))
+            }
+        };
+        let _g = rt().enter();
+        self.control
+            .set_affinity(affinity)
+            .map_err(anyhow::Error::new)
     }
 
     /// Finishes the stream cleanly. The peer receives an end-of-data signal.
