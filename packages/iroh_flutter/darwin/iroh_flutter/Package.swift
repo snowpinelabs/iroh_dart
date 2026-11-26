@@ -18,8 +18,8 @@
 import Foundation
 import PackageDescription
 
-let version = "1.4.0"
-let checksum = "36c1c00c5c5cd93a92012b63070bced432545393e9095a399e3dc1fe5f674f0f"
+let version = "1.5.0"
+let checksum = "6c20a8649b5887f45af972b4ed632ea7b3b3db4316f4b5fffcbd314d3be0c6c6"
 
 let localFramework = "Frameworks/irohdart_ffi.xcframework"
 let packageDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
